@@ -8,21 +8,17 @@ Last updated: build step 1.
 ---
 
 ## 1. Channels
-- ⚠️ **Assumption:** launch on an **embeddable web chat widget** first. WhatsApp /
-  Telegram / email are optional later via an n8n glue layer (see PLAN → n8n verdict).
-- **Why:** brief says "chatbot" without naming a channel; web widget is lowest-risk
-  first surface and the client's site is the natural home.
-- **Needs client:** confirm target channel(s).
+- ✅ **Confirmed:** launch on an **embeddable web chat widget**. WhatsApp / Telegram /
+  email are deferred; can be added later via an n8n glue layer (see PLAN → n8n verdict).
 
 ## 2. Languages
 - ✅ **Confirmed:** German (primary) + English (secondary). Reply language mirrors
   the user's query language. No other languages in scope.
 
 ## 3. Human handoff target
-- ⚠️ **Assumption:** on low confidence / out-of-scope, hand off to the client's
-  phone + email as listed in the business info sheet (`Informationsbogen`).
-- **Needs client:** confirm exact handoff (phone, email, or a booking link) and
-  business hours to set expectations in the message.
+- ✅ **Confirmed:** on low confidence / out-of-scope, hand off via **email**. The
+  destination address is client-provided and stored in the `HANDOFF_EMAIL`
+  environment variable (gitignored `.env`) — never hardcoded in the public repo.
 
 ## 4. Pricing document delivery
 - ✅ **Confirmed:** pricing answers return **both** an itemized price summary **and**
