@@ -1,0 +1,9 @@
+# Phase 2 — deterministic PDF price extraction. Pure-Python, no torch; runs on 3.14.
+# Pinned to the exact versions verified working, for reproducible extraction.
+pdfplumber==0.11.10
+# transitive (pinned for a reproducible parse — text extraction must be stable):
+pdfminer.six==20260107
+pypdfium2==5.11.0
+pillow==12.3.0
+charset-normalizer==3.4.9
+cryptography==49.0.0
