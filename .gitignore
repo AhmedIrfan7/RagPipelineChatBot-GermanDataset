@@ -1,0 +1,81 @@
+# ==========================================================================
+# CONFIDENTIAL CLIENT DATA — NEVER COMMIT
+# The dataset contains a real driving-school client's internal price sheets,
+# business questionnaire, and consultation protocols. The entire data/ tree
+# and any derived/extracted artifacts stay local only.
+# ==========================================================================
+data/
+*.pdf
+*.PDF
+
+# Extracted / derived client content (prices, business info) — confidential
+*.client.json
+processed/
+interim/
+
+# ---- Secrets / environment ----
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+credentials.json
+service_account*.json
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ---- Vector store / DB local artifacts ----
+*.sqlite
+*.sqlite3
+*.db
+qdrant_storage/
+chroma/
+chroma_db/
+.chroma/
+*.faiss
+*.index
+
+# ---- Node / frontend (added later) ----
+node_modules/
+.next/
+out/
+dist/
+.turbo/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Logs / traces ----
+logs/
+*.log
+traces/
