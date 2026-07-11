@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from fahrschule.store import Store
+from fahrschule.disambiguation import TREES, Disambiguator
 
 PRICES_DIR = ROOT / "data" / "processed" / "prices"
 MANIFEST = ROOT / "data" / "interim" / "manifest.json"
@@ -79,6 +80,27 @@ class TestGoldenPrices(unittest.TestCase):
         self.assertIn("B", r.candidates)       # plain B is one option, not THE answer
         self.assertIn("B197", r.candidates)
         self.assertGreater(len(r.candidates), 5, "Class B should surface many variants")
+
+    def test_disambiguation_trees_cover_current_variants_exactly(self):
+        """Every tree leaf must be a current variant, and every current variant of a
+        treed base must be reachable — otherwise a price is unreachable or a leaf is
+        dead. This closes the loop between the store and the follow-up logic."""
+        d = Disambiguator()
+        for base in TREES:
+            leaves = d.leaf_variants(base)
+            current = {v["variant_key"] for v in self.store.list_variants(base)}
+            self.assertEqual(leaves, current,
+                             f"base {base}: tree leaves {leaves ^ current} mismatch store")
+
+    def test_walk_resolves_to_real_price(self):
+        """An end-to-end walk (B, automatic) must land on a variant the store can price."""
+        d = Disambiguator()
+        d.choose("b_situation", "neu")
+        d.choose("b_combine", "nur_b")
+        step = d.choose("b_transmission", "automatik")
+        rec = self.store.get_price(step.variant_key)
+        self.assertIsNotNone(rec)
+        self.assertEqual(rec["totals"]["gesamtbetrag"], 2696.21)  # B197
 
 
 if __name__ == "__main__":
