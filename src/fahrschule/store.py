@@ -37,6 +37,9 @@ SYNONYMS: dict[str, list[str]] = {
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
 
+# case-insensitive lookup of class codes (LICENSE_CLASSES has mixed case, e.g. "Mofa")
+_CLASS_BY_UPPER = {code.upper(): code for code in LICENSE_CLASSES}
+
 # Key-number tokens users actually type -> the specific variant key(s) they mean.
 # B96 stays ambiguous (Einzel vs Gruppe) so the agent asks which format.
 _KEYNUM_RULES: list[tuple[re.Pattern, list[str]]] = [
@@ -152,8 +155,8 @@ class Store:
         bases: list[str] = []
         for t in toks:
             up = t.upper()
-            if up in LICENSE_CLASSES:
-                bases.append(up)
+            if up in _CLASS_BY_UPPER:
+                bases.append(_CLASS_BY_UPPER[up])   # canonical case (e.g. "MOFA" -> "Mofa")
             elif t in SYNONYMS:
                 bases.extend(SYNONYMS[t])
         bases = list(dict.fromkeys(bases))

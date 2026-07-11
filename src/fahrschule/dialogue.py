@@ -84,10 +84,11 @@ def _t(lang: str, de: str, en: str) -> str:
 class DialogueEngine:
     def __init__(self, store: Store, disambiguator: Disambiguator | None = None,
                  handoff_email: str | None = None, school_name: str | None = None,
-                 kb=None):
+                 kb=None, llm=None):
         self.store = store
         self.d = disambiguator or Disambiguator()
         self.kb = kb          # optional KnowledgeBase for general (non-price) questions
+        self.llm = llm        # optional LLM assistant (intent routing + EN translation)
         self.handoff_email = handoff_email or os.environ.get("HANDOFF_EMAIL", "")
         # client brand name is configured at runtime (env), never hardcoded in the repo
         self.school_name = school_name or os.environ.get("SCHOOL_NAME", "")
@@ -114,17 +115,37 @@ class DialogueEngine:
         # 1) explicit price intent + a class -> pricing path
         if price_sig and r.status in ("resolved", "ambiguous"):
             return self._route_class(session, r)
-        # 2) explicit FAQ intent -> knowledge; if no confident answer, hand off
+        # 2) explicit FAQ intent -> knowledge; if none, LLM fallback, else hand off
         #    (do NOT fall into pricing disambiguation for a general question)
         if faq_sig:
             ans = self._faq_search(text, session.language)
-            return self._faq_reply(session, ans) if ans else self._handoff(session, unresolved=True)
+            if ans:
+                return self._faq_reply(session, ans)
+            return self._llm_fallback(session, text) or self._handoff(session, unresolved=True)
         # 3) a class was named without explicit intent -> pricing
         if r.status in ("resolved", "ambiguous"):
             return self._route_class(session, r)
-        # 4) no class -> try knowledge, else hand off
+        # 4) no class matched deterministically -> knowledge, then LLM, else hand off
         ans = self._faq_search(text, session.language)
-        return self._faq_reply(session, ans) if ans else self._handoff(session, unresolved=True)
+        if ans:
+            return self._faq_reply(session, ans)
+        return self._llm_fallback(session, text) or self._handoff(session, unresolved=True)
+
+    def _llm_fallback(self, session: Session, text: str) -> Reply | None:
+        """Use the LLM only to ROUTE free text the rule-based layer missed. The LLM
+        never produces an answer or a price — it maps to a class (validated) or a
+        rephrased FAQ query, then the deterministic path takes over."""
+        if not self.llm:
+            return None
+        intent = self.llm.extract_intent(text, list(LICENSE_CLASSES.keys()))
+        if not intent:
+            return None
+        if intent.get("class"):
+            r = self.store.resolve_class(intent["class"])
+            if r.status in ("resolved", "ambiguous"):
+                return self._route_class(session, r)
+        ans = self._faq_search(intent.get("query") or text, session.language)
+        return self._faq_reply(session, ans) if ans else None
 
     def _route_class(self, session: Session, r) -> Reply:
         if r.status == "resolved":
@@ -137,7 +158,9 @@ class DialogueEngine:
     def _faq_reply(self, session: Session, res: dict) -> Reply:
         answer = res["answer"]
         if session.language == "en":
-            answer = "Here is the relevant information (from our info sheet):\n\n" + answer
+            translated = self.llm.translate(answer, "English") if self.llm else None
+            answer = translated or (
+                "Here is the relevant information (from our info sheet):\n\n" + answer)
         return Reply("faq", answer)
 
     def handle_option(self, session: Session, option_key: str) -> Reply:

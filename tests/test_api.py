@@ -22,7 +22,12 @@ class TestApi(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from fahrschule.api import app
-        cls.client = TestClient(app)
+        cls.ctx = TestClient(app)
+        cls.client = cls.ctx.__enter__()   # runs the startup lifespan (loads the store)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.ctx.__exit__(None, None, None)
 
     def test_health(self):
         r = self.client.get("/api/health")

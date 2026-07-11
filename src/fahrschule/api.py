@@ -14,6 +14,7 @@ address via HANDOFF_EMAIL environment variables.
 
 from __future__ import annotations
 
+import os
 import uuid
 from pathlib import Path
 
@@ -47,9 +48,19 @@ _sessions: dict[str, Session] = {}
 @app.on_event("startup")
 def _startup() -> None:
     global _store, _engine
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(REPO_ROOT / ".env")   # load OPENAI_API_KEY / HANDOFF_EMAIL / SCHOOL_NAME
+    except Exception:
+        pass
     _store = Store.from_dir(PRICES_DIR, MANIFEST)
     kb = KnowledgeBase.from_dir(KNOWLEDGE_DIR) if KNOWLEDGE_DIR.exists() else None
-    _engine = DialogueEngine(_store, Disambiguator(), kb=kb)
+    llm = None
+    if os.environ.get("OPENAI_API_KEY"):
+        from .llm import LLMClient
+        client = LLMClient()
+        llm = client if client.available() else None
+    _engine = DialogueEngine(_store, Disambiguator(), kb=kb, llm=llm)
 
 
 def _reply_dict(r: Reply) -> dict:
