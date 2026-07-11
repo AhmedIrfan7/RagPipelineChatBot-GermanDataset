@@ -76,5 +76,8 @@ class SemanticIndex:
             return None
         idx = cls(vectors, docs)
         if cache_path:
-            idx.save(cache_path, digest)
+            try:
+                idx.save(cache_path, digest)   # best-effort (data may be a read-only mount)
+            except Exception:
+                pass
         return idx

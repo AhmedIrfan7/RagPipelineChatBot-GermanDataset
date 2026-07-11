@@ -1,0 +1,11 @@
+services:
+  chatbot:
+    build: .
+    image: fahrschule-chatbot:latest
+    ports:
+      - "8123:8123"
+    env_file:
+      - .env                       # OPENAI_API_KEY / HANDOFF_EMAIL / SCHOOL_NAME
+    volumes:
+      - ./data:/app/data:ro        # confidential data mounted read-only (never in the image)
+    restart: unless-stopped

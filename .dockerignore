@@ -1,0 +1,26 @@
+# Never bake confidential data or secrets into the image (mounted at runtime instead)
+data/
+.env
+.env.*
+!.env.example
+
+# dev/venv/cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# vcs / editors / docs not needed at runtime
+.git/
+.gitignore
+.gitattributes
+.github/
+.idea/
+.vscode/
+tests/
+scripts/
+docs/
+*.md
