@@ -58,14 +58,15 @@ class TestHybridSearch(unittest.TestCase):
         return kb
 
     def test_semantic_hit(self):
-        r = self._kb([1, 0, 0]).search("egal")
+        # query shares a term with the target doc (as real canonicalized queries do)
+        r = self._kb([1, 0, 0]).search("Antwort eins")
         self.assertIsNotNone(r)
         self.assertEqual(r["answer"], "Antwort eins")
         self.assertEqual(r["retriever"], "semantic")
 
     def test_below_threshold_falls_back_and_returns_none(self):
-        # orthogonal query -> cosine 0 with both docs -> below threshold; BM25 disabled -> None
-        self.assertIsNone(self._kb([0, 0, 1]).search("egal"))
+        # orthogonal query -> cosine 0 with both docs -> below floor; BM25 disabled -> None
+        self.assertIsNone(self._kb([0, 0, 1]).search("Antwort eins"))
 
     def test_no_semantic_uses_bm25(self):
         kb = KnowledgeBase(DOCS, min_score=0.0)   # semantic not attached

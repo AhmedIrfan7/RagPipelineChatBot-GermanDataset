@@ -35,7 +35,7 @@ SYNONYMS: dict[str, list[str]] = {
     "bus": ["C"],  # (no D-class sheets in dataset -> will resolve to not_found/handoff)
 }
 
-_TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
+_TOKEN_RE = re.compile(r"[A-Za-zäöüßÄÖÜ0-9]+")   # include umlauts (Anhänger, Förderung, …)
 
 # case-insensitive lookup of class codes (LICENSE_CLASSES has mixed case, e.g. "Mofa")
 _CLASS_BY_UPPER = {code.upper(): code for code in LICENSE_CLASSES}

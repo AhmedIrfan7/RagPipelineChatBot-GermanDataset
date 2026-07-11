@@ -144,6 +144,8 @@ def build_docs(knowledge_dir: Path) -> list[dict]:
 
 class KnowledgeBase:
     K1, B = 1.5, 0.75
+    HYBRID_W = 0.06        # weight of BM25 when blended with cosine in semantic re-rank
+    CAND_FLOOR = 0.35      # min cosine to enter re-ranking (final acceptance is stricter)
 
     def __init__(self, docs: list[dict], min_score: float = 4.0,
                  semantic=None, embed_query=None, sim_threshold: float = 0.45):
@@ -202,16 +204,36 @@ class KnowledgeBase:
         qv = self.embed_query(query)
         if not qv:
             return None
-        hits = self.semantic.search(qv, top_k=1)
-        if not hits or hits[0][0] < self.sim_threshold:
+        # embeddings generate CANDIDATES (recall); BM25 re-ranks them (precision), so a
+        # high-cosine but off-topic section can't beat the section that shares the query's
+        # keywords. Only for pure-paraphrase matches (no term overlap at all) do we defer
+        # to cosine, and then require a keyword-consistency check to stay on topic.
+        # generate candidates at a lower floor, then re-rank by a cosine+BM25 blend so a
+        # keyword-bearing section can beat a slightly-higher-cosine but off-topic one.
+        cand = [(sim, i) for sim, i in self.semantic.search(qv, top_k=8)
+                if sim >= self.CAND_FLOOR]
+        if not cand:
             return None
-        sim, i = hits[0]
-        d = self.semantic.docs[i]
+        qt = _tokens(query)
+        scored = sorted(((sim + self.HYBRID_W * self._bm25_score_or_0(qt, i),
+                          sim, self._bm25_score_or_0(qt, i), i) for sim, i in cand),
+                        reverse=True)
+        _, sim, bm, i = scored[0]
+        # accept a confident cosine, OR a keyword-supported match with a lower cosine;
+        # reject pure-semantic winners that don't even share a term (off-topic).
+        if not (sim >= self.sim_threshold or (bm > 0 and sim >= self.CAND_FLOOR)):
+            return None
+        if bm <= 0 and set(qt) and not (set(qt) & set(self.doc_tokens[i])):
+            return None
+        d = self.docs[i]
         answer = d["answer"]
         if len(answer) > 700:
             answer = answer[:700].rsplit(" ", 1)[0] + " …"
         return {"answer": answer, "source": d["source"], "kind": d["kind"],
                 "score": round(sim, 3), "retriever": "semantic"}
+
+    def _bm25_score_or_0(self, query_tokens: list[str], i: int) -> float:
+        return self.score(query_tokens, i) if query_tokens else 0.0
 
     def _bm25_search(self, query: str) -> dict | None:
         qt = _tokens(query)

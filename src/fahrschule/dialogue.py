@@ -115,6 +115,12 @@ class DialogueEngine:
         # 1) explicit price intent + a class -> pricing path
         if price_sig and r.status in ("resolved", "ambiguous"):
             return self._route_class(session, r)
+        # 1b) price intent but the class wasn't resolved by rules -> ask the LLM for the
+        #     class before falling through to FAQ (a price question should get pricing)
+        if price_sig and self.llm:
+            routed = self._llm_route_class(session, text)
+            if routed:
+                return routed
         # 2) explicit FAQ intent -> knowledge; if none, LLM fallback, else hand off
         #    (do NOT fall into pricing disambiguation for a general question)
         if faq_sig:
@@ -130,6 +136,15 @@ class DialogueEngine:
         if ans:
             return self._faq_reply(session, ans)
         return self._llm_fallback(session, text) or self._handoff(session, unresolved=True)
+
+    def _llm_route_class(self, session: Session, text: str) -> Reply | None:
+        """LLM class extraction only (used for price-intent queries the rules missed)."""
+        intent = self.llm.extract_intent(text, list(LICENSE_CLASSES.keys()))
+        if intent and intent.get("class"):
+            r = self.store.resolve_class(intent["class"])
+            if r.status in ("resolved", "ambiguous"):
+                return self._route_class(session, r)
+        return None
 
     def _llm_fallback(self, session: Session, text: str) -> Reply | None:
         """Use the LLM only to ROUTE free text the rule-based layer missed. The LLM
