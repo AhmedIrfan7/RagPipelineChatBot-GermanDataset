@@ -64,7 +64,9 @@ class TestLLMRouting(unittest.TestCase):
         s = Session("l2")
         r = eng.handle_text(s, "was brauche ich zum Rollerfahren mit 15")
         self.assertEqual(r.kind, "price")
-        self.assertEqual(r.price["gesamtbetrag"], 236.96)   # Mofa, from the store
+        self.assertEqual(r.price["variant_key"], "Mofa")     # routed via LLM to Mofa
+        self.assertEqual(r.price["gesamtbetrag"],
+                         self.store.get_price("Mofa")["totals"]["gesamtbetrag"])
 
     def test_en_faq_is_translated(self):
         llm = FakeLLM(translation="Opening hours Kleve: Mon-Thu 08:30-18:00.")

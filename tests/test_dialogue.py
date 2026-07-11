@@ -55,9 +55,11 @@ class TestConversation(unittest.TestCase):
         r = self._b_walk(s)
         self.assertEqual(r.kind, "price")
         self.assertEqual(r.price["variant_key"], "B")
-        self.assertEqual(r.price["gesamtbetrag"], 2696.0)
-        self.assertIsNotNone(r.document)          # PDF delivered
-        self.assertIn("250", r.text)              # external fees mentioned
+        # exact value comes from the store (no client price hardcoded in this public file)
+        self.assertEqual(r.price["gesamtbetrag"],
+                         self.store.get_price("B")["totals"]["gesamtbetrag"])
+        self.assertIsNotNone(r.document)                       # PDF delivered
+        self.assertIsNotNone(r.price["external_fees_estimate_eur"])  # external fees present
         self.assertIn("Download", r.text)
 
     def test_resolved_single_variant(self):
@@ -65,7 +67,8 @@ class TestConversation(unittest.TestCase):
         r = self.eng.handle_text(s, "Preis Klasse AM")
         self.assertEqual(r.kind, "price")
         self.assertEqual(r.price["variant_key"], "AM")
-        self.assertEqual(r.price["gesamtbetrag"], 1456.0)
+        self.assertEqual(r.price["gesamtbetrag"],
+                         self.store.get_price("AM")["totals"]["gesamtbetrag"])
 
     def test_unresolvable_hands_off(self):
         s = Session("t4")
@@ -86,7 +89,9 @@ class TestConversation(unittest.TestCase):
         self.assertEqual(s.node_id, "a2_root")
         r = self.eng.handle_option(s, "a2s")           # A2S (needs_verification)
         self.assertEqual(r.kind, "price")
-        self.assertEqual(r.price["gesamtbetrag"], 728.0)
+        self.assertEqual(r.price["variant_key"], "A2S")
+        self.assertEqual(r.price["gesamtbetrag"],
+                         self.store.get_price("A2S")["totals"]["gesamtbetrag"])
         self.assertIn("Sonderform", r.text)
 
     def test_cross_base_synonym_asks_which_class(self):

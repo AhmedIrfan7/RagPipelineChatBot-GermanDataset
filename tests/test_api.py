@@ -43,7 +43,8 @@ class TestApi(unittest.TestCase):
             r = self.client.post("/api/message", json={"session_id": sid, "option_key": key})
         reply = r.json()["reply"]
         self.assertEqual(reply["kind"], "price")
-        self.assertEqual(reply["price"]["gesamtbetrag"], 2696.0)
+        self.assertEqual(reply["price"]["variant_key"], "B")
+        self.assertGreater(reply["price"]["gesamtbetrag"], 0)
 
     def test_document_download(self):
         r = self.client.get("/api/document/B")

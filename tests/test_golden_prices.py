@@ -21,21 +21,15 @@ from fahrschule.disambiguation import TREES, Disambiguator
 
 PRICES_DIR = ROOT / "data" / "processed" / "prices"
 MANIFEST = ROOT / "data" / "interim" / "manifest.json"
+GOLDEN_FILE = ROOT / "data" / "golden" / "expected_prices.json"
 
-# variant_key -> exact expected Gesamtbetrag (ground truth from source PDFs)
-GOLDEN = {
-    "B": 2696.00,
-    "BE": 894.00,
-    "B197": 2696.21,
-    "Mofa": 236.96,
-    "CE_BA": 3372.06,
-    "C": 2461.00,
-    "A": 1866.00,
-    "L": 577.00,
-    "C_CE_BGQ_TZ": 6608.00,
-}
+# Golden expected prices are confidential -> loaded from a gitignored fixture, never
+# hardcoded in this public file. The fixture is the human-verified sign-off baseline;
+# any drift from it fails this regression gate.
+GOLDEN = (json.loads(GOLDEN_FILE.read_text(encoding="utf-8"))["prices"]
+          if GOLDEN_FILE.exists() else {})
 
-_have_data = PRICES_DIR.exists() and any(PRICES_DIR.glob("*.json"))
+_have_data = PRICES_DIR.exists() and any(PRICES_DIR.glob("*.json")) and bool(GOLDEN)
 
 
 @unittest.skipUnless(_have_data, "real client data not present (local-only)")
@@ -100,7 +94,8 @@ class TestGoldenPrices(unittest.TestCase):
         step = d.choose("b_transmission", "automatik")
         rec = self.store.get_price(step.variant_key)
         self.assertIsNotNone(rec)
-        self.assertEqual(rec["totals"]["gesamtbetrag"], 2696.21)  # B197
+        self.assertEqual(step.variant_key, "B197")
+        self.assertEqual(rec["totals"]["gesamtbetrag"], GOLDEN["B197"])
 
 
 if __name__ == "__main__":
