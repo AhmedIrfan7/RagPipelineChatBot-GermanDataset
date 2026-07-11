@@ -59,7 +59,15 @@ def _startup() -> None:
     if os.environ.get("OPENAI_API_KEY"):
         from .llm import LLMClient
         client = LLMClient()
-        llm = client if client.available() else None
+        if client.available():
+            llm = client
+            # build/load the semantic FAQ index (cached to disk) for better recall
+            if kb is not None:
+                from .embeddings import SemanticIndex
+                cache = KNOWLEDGE_DIR / "embeddings.json"
+                index = SemanticIndex.build(kb.docs, client.embed, cache_path=cache)
+                if index is not None:
+                    kb.attach_semantic(index, lambda q: (client.embed([q]) or [None])[0])
     _engine = DialogueEngine(_store, Disambiguator(), kb=kb, llm=llm)
 
 

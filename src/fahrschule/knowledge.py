@@ -145,9 +145,13 @@ def build_docs(knowledge_dir: Path) -> list[dict]:
 class KnowledgeBase:
     K1, B = 1.5, 0.75
 
-    def __init__(self, docs: list[dict], min_score: float = 3.5):
+    def __init__(self, docs: list[dict], min_score: float = 4.0,
+                 semantic=None, embed_query=None, sim_threshold: float = 0.45):
         self.docs = docs
         self.min_score = min_score
+        self.semantic = semantic          # optional SemanticIndex
+        self.embed_query = embed_query    # callable(str) -> vector | None
+        self.sim_threshold = sim_threshold
         self.doc_tokens = [_tokens(d["index_text"]) for d in docs]
         self.dl = [len(t) for t in self.doc_tokens]
         self.avgdl = (sum(self.dl) / len(self.dl)) if self.dl else 0.0
@@ -162,8 +166,11 @@ class KnowledgeBase:
                 self.tf[i][term] = self.tf[i].get(term, 0) + 1
 
     @classmethod
-    def from_dir(cls, knowledge_dir: str | Path, min_score: float = 3.5) -> "KnowledgeBase":
+    def from_dir(cls, knowledge_dir: str | Path, min_score: float = 4.0) -> "KnowledgeBase":
         return cls(build_docs(Path(knowledge_dir)), min_score=min_score)
+
+    def attach_semantic(self, semantic, embed_query) -> None:
+        self.semantic, self.embed_query = semantic, embed_query
 
     def _idf(self, term: str) -> float:
         df = self.df.get(term, 0)
@@ -182,6 +189,31 @@ class KnowledgeBase:
         return s
 
     def search(self, query: str, lang: str = "de") -> dict | None:
+        # 1) semantic first (better recall) — gated by a cosine-similarity threshold
+        sem = self._semantic_search(query)
+        if sem is not None:
+            return sem
+        # 2) precision-first BM25 fallback
+        return self._bm25_search(query)
+
+    def _semantic_search(self, query: str) -> dict | None:
+        if not (self.semantic and self.embed_query):
+            return None
+        qv = self.embed_query(query)
+        if not qv:
+            return None
+        hits = self.semantic.search(qv, top_k=1)
+        if not hits or hits[0][0] < self.sim_threshold:
+            return None
+        sim, i = hits[0]
+        d = self.semantic.docs[i]
+        answer = d["answer"]
+        if len(answer) > 700:
+            answer = answer[:700].rsplit(" ", 1)[0] + " …"
+        return {"answer": answer, "source": d["source"], "kind": d["kind"],
+                "score": round(sim, 3), "retriever": "semantic"}
+
+    def _bm25_search(self, query: str) -> dict | None:
         qt = _tokens(query)
         if not qt:
             return None
@@ -208,7 +240,7 @@ class KnowledgeBase:
         if len(answer) > 700:
             answer = answer[:700].rsplit(" ", 1)[0] + " …"
         return {"answer": answer, "source": d["source"], "kind": d["kind"],
-                "score": round(best_score, 2)}
+                "score": round(best_score, 2), "retriever": "bm25"}
 
 
 if __name__ == "__main__":

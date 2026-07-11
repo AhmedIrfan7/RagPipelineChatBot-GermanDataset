@@ -67,6 +67,18 @@ class LLMClient:
             intent = "other"
         return {"intent": intent, "class": cls, "query": (data.get("query") or text)}
 
+    def embed(self, texts: list[str], model: str = "text-embedding-3-small") -> list[list[float]] | None:
+        """Embed texts for semantic FAQ retrieval. Returns None on no-key/error.
+        Note: this sends the passed text to OpenAI's embedding API."""
+        c = self._client_or_none()
+        if c is None or not texts:
+            return None
+        try:
+            r = c.embeddings.create(model=model, input=texts)
+            return [d.embedding for d in r.data]
+        except Exception:
+            return None
+
     def translate(self, text: str, target_language: str = "English") -> str | None:
         c = self._client_or_none()
         if c is None or not text.strip():
