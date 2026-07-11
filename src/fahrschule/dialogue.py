@@ -39,6 +39,22 @@ def detect_language(text: str) -> str:
     return "en" if en > de else "de"
 
 
+# intent signals (substring match on lowercased text)
+_PRICE_SIGNALS = ("kostet", "kosten", "preis", "cost", "price", "teuer", "gebühr",
+                  "euro", "betrag", "zahl", "bezahl", "wieviel", "wie viel", "how much")
+_FAQ_SIGNALS = ("öffnung", "unterlage", "dokument", "anmeld", "melde", "sehtest",
+                "hilfe", "simulator", "förder", "finanzier", "gültig", "online",
+                "fahrzeug", "standort", "adresse", "telefon", "kontakt", "uhrzeit",
+                "wann", "theorie", "voraussetz", "dauer", "wie lange", "öffnungszeit",
+                "hours", "document", "register", "valid", "funding", "vehicle",
+                "address", "phone", "contact")
+
+
+def _has_signal(text: str, signals: tuple[str, ...]) -> bool:
+    low = text.lower()
+    return any(s in low for s in signals)
+
+
 @dataclass
 class Session:
     session_id: str
@@ -67,9 +83,11 @@ def _t(lang: str, de: str, en: str) -> str:
 
 class DialogueEngine:
     def __init__(self, store: Store, disambiguator: Disambiguator | None = None,
-                 handoff_email: str | None = None, school_name: str | None = None):
+                 handoff_email: str | None = None, school_name: str | None = None,
+                 kb=None):
         self.store = store
         self.d = disambiguator or Disambiguator()
+        self.kb = kb          # optional KnowledgeBase for general (non-price) questions
         self.handoff_email = handoff_email or os.environ.get("HANDOFF_EMAIL", "")
         # client brand name is configured at runtime (env), never hardcoded in the repo
         self.school_name = school_name or os.environ.get("SCHOOL_NAME", "")
@@ -89,12 +107,38 @@ class DialogueEngine:
         if not session.explicit_language:
             session.language = detect_language(text)
         session.history.append({"role": "user", "text": text})
+        price_sig = _has_signal(text, _PRICE_SIGNALS)
+        faq_sig = _has_signal(text, _FAQ_SIGNALS)
         r = self.store.resolve_class(text)
+
+        # 1) explicit price intent + a class -> pricing path
+        if price_sig and r.status in ("resolved", "ambiguous"):
+            return self._route_class(session, r)
+        # 2) explicit FAQ intent -> knowledge; if no confident answer, hand off
+        #    (do NOT fall into pricing disambiguation for a general question)
+        if faq_sig:
+            ans = self._faq_search(text, session.language)
+            return self._faq_reply(session, ans) if ans else self._handoff(session, unresolved=True)
+        # 3) a class was named without explicit intent -> pricing
+        if r.status in ("resolved", "ambiguous"):
+            return self._route_class(session, r)
+        # 4) no class -> try knowledge, else hand off
+        ans = self._faq_search(text, session.language)
+        return self._faq_reply(session, ans) if ans else self._handoff(session, unresolved=True)
+
+    def _route_class(self, session: Session, r) -> Reply:
         if r.status == "resolved":
             return self._price_reply(session, r.variant_key)
-        if r.status == "ambiguous":
-            return self._begin_disambiguation(session, r.candidates)
-        return self._handoff(session, unresolved=True)
+        return self._begin_disambiguation(session, r.candidates)
+
+    def _faq_search(self, text: str, language: str):
+        return self.kb.search(text, language) if self.kb else None
+
+    def _faq_reply(self, session: Session, res: dict) -> Reply:
+        answer = res["answer"]
+        if session.language == "en":
+            answer = "Here is the relevant information (from our info sheet):\n\n" + answer
+        return Reply("faq", answer)
 
     def handle_option(self, session: Session, option_key: str) -> Reply:
         if session.stage == "choose_base":

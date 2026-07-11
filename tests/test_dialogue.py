@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from fahrschule.dialogue import DialogueEngine, Session, detect_language
 from fahrschule.disambiguation import Disambiguator
+from fahrschule.knowledge import KnowledgeBase
 from fahrschule.store import Store
 
 PRICES_DIR = ROOT / "data" / "processed" / "prices"
@@ -30,7 +31,9 @@ class TestConversation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.store = Store.from_dir(PRICES_DIR, MANIFEST)
-        cls.eng = DialogueEngine(cls.store, Disambiguator(), handoff_email="team@example.com")
+        kdir = ROOT / "data" / "processed" / "knowledge"
+        kb = KnowledgeBase.from_dir(kdir) if (kdir / "rag_chunks.json").exists() else None
+        cls.eng = DialogueEngine(cls.store, Disambiguator(), handoff_email="team@example.com", kb=kb)
 
     def _b_walk(self, session):
         self.eng.handle_text(session, "Was kostet Klasse B?")
@@ -101,6 +104,26 @@ class TestConversation(unittest.TestCase):
         s = Session("t8")
         r = self.eng._price_reply(s, "C_CE_BA")        # archived 2024_06
         self.assertEqual(r.kind, "handoff")
+
+    def test_faq_question_answered(self):
+        s = Session("t9")
+        r = self.eng.handle_text(s, "Wie sind die Öffnungszeiten?")
+        self.assertEqual(r.kind, "faq")
+        self.assertIn("08:30", r.text)
+
+    def test_price_intent_with_class_goes_pricing_not_faq(self):
+        s = Session("t10")
+        r = self.eng.handle_text(s, "Was kostet die Ausbildung für Klasse C?")
+        self.assertEqual(r.kind, "question")          # C is ambiguous -> disambiguation
+        self.assertEqual(s.stage, "disambiguating")
+
+    def test_faq_intent_without_confident_answer_hands_off_not_pricing(self):
+        # 'melde ... Klasse B' is FAQ-intent; KB has no confident answer at threshold,
+        # so it must hand off, NOT drop into Class-B price disambiguation.
+        s = Session("t11")
+        r = self.eng.handle_text(s, "Wie melde ich mich für Klasse B an?")
+        self.assertEqual(r.kind, "handoff")
+        self.assertNotEqual(s.stage, "disambiguating")
 
 
 if __name__ == "__main__":

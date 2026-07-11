@@ -24,12 +24,14 @@ from pydantic import BaseModel
 
 from .dialogue import DialogueEngine, Reply, Session
 from .disambiguation import Disambiguator
+from .knowledge import KnowledgeBase
 from .store import Store
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PRICES_DIR = REPO_ROOT / "data" / "processed" / "prices"
 MANIFEST = REPO_ROOT / "data" / "interim" / "manifest.json"
 RAW_DIR = REPO_ROOT / "data" / "raw"
+KNOWLEDGE_DIR = REPO_ROOT / "data" / "processed" / "knowledge"
 WIDGET = Path(__file__).resolve().parent / "web" / "index.html"
 
 app = FastAPI(title="Fahrschule Chatbot", version="0.1.0")
@@ -46,7 +48,8 @@ _sessions: dict[str, Session] = {}
 def _startup() -> None:
     global _store, _engine
     _store = Store.from_dir(PRICES_DIR, MANIFEST)
-    _engine = DialogueEngine(_store, Disambiguator())
+    kb = KnowledgeBase.from_dir(KNOWLEDGE_DIR) if KNOWLEDGE_DIR.exists() else None
+    _engine = DialogueEngine(_store, Disambiguator(), kb=kb)
 
 
 def _reply_dict(r: Reply) -> dict:
