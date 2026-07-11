@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fahrschule Assistent</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --text:#e2e8f0; --muted:#94a3b8;
+    --accent:#2563eb; --accent2:#1d4ed8; --bot:#334155; --user:#2563eb; --ok:#16a34a;
+    --border:#334155; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       background:var(--bg);color:var(--text);height:100vh;display:flex;justify-content:center}
+  .app{width:min(560px,100%);display:flex;flex-direction:column;height:100vh;
+       background:var(--panel);border-left:1px solid var(--border);border-right:1px solid var(--border)}
+  header{padding:14px 18px;background:var(--panel2);border-bottom:1px solid var(--border);
+         display:flex;align-items:center;gap:10px}
+  header .logo{width:34px;height:34px;border-radius:9px;background:var(--accent);
+       display:grid;place-items:center;font-weight:700;color:#fff}
+  header h1{font-size:15px;margin:0;flex:1}
+  header .sub{font-size:12px;color:var(--muted);margin:0}
+  .lang{display:flex;gap:4px}
+  .lang button{background:transparent;border:1px solid var(--border);color:var(--muted);
+       padding:4px 9px;border-radius:8px;cursor:pointer;font-size:12px}
+  .lang button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  #log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:85%;padding:11px 14px;border-radius:var(--radius);line-height:1.45;font-size:14px;
+       animation:pop .18s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+  .bot{background:var(--bot);align-self:flex-start;border-bottom-left-radius:4px}
+  .user{background:var(--user);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+  .options{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-start;max-width:95%}
+  .options button{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+       padding:9px 13px;border-radius:10px;cursor:pointer;font-size:13px;transition:.12s}
+  .options button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+  .card{align-self:flex-start;max-width:95%;background:var(--panel2);border:1px solid var(--border);
+        border-radius:var(--radius);padding:14px;font-size:13px}
+  .card .title{font-weight:600;margin-bottom:2px}
+  .card .total{font-size:26px;font-weight:800;color:#fff;margin:6px 0}
+  .card .muted{color:var(--muted);font-size:12px}
+  .card table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+  .card td{padding:3px 4px;border-top:1px solid var(--border)}
+  .card td:last-child{text-align:right;white-space:nowrap}
+  .dl{display:inline-block;margin-top:12px;background:var(--ok);color:#fff;text-decoration:none;
+      padding:9px 14px;border-radius:10px;font-weight:600;font-size:13px}
+  .handoff{border-left:3px solid #f59e0b}
+  footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--panel2)}
+  footer input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);
+       padding:11px 13px;border-radius:10px;font-size:14px;outline:none}
+  footer button{background:var(--accent);border:none;color:#fff;padding:0 16px;border-radius:10px;
+       cursor:pointer;font-weight:600}
+  footer button:hover{background:var(--accent2)}
+  .typing{color:var(--muted);font-size:12px;align-self:flex-start}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">FS</div>
+    <div style="flex:1">
+      <h1>Fahrschul-Assistent</h1>
+      <p class="sub" id="sub">Preise &amp; Informationen</p>
+    </div>
+    <div class="lang">
+      <button id="de" class="active" onclick="setLang('de')">DE</button>
+      <button id="en" onclick="setLang('en')">EN</button>
+    </div>
+  </header>
+  <div id="log"></div>
+  <footer>
+    <input id="inp" placeholder="Nachricht…" onkeydown="if(event.key==='Enter')send()">
+    <button onclick="send()">➤</button>
+  </footer>
+</div>
+<script>
+let sid=null, lang="de";
+const log=document.getElementById("log"), inp=document.getElementById("inp");
+const T={de:{ph:"Nachricht…",sub:"Preise & Informationen"},en:{ph:"Message…",sub:"Prices & information"}};
+
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function md(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');}
+
+function addBot(text,cls=""){const d=document.createElement("div");d.className="msg bot "+cls;d.innerHTML=md(text);log.appendChild(d);scroll();}
+function addUser(text){const d=document.createElement("div");d.className="msg user";d.textContent=text;log.appendChild(d);scroll();}
+function addOptions(opts){const w=document.createElement("div");w.className="options";
+  opts.forEach(o=>{const b=document.createElement("button");b.textContent=o.label;
+    b.onclick=()=>{addUser(o.label);clearOptions();sendOption(o.key);};w.appendChild(b);});
+  w.dataset.opts="1";log.appendChild(w);scroll();}
+function clearOptions(){document.querySelectorAll('[data-opts]').forEach(e=>e.remove());}
+function addCard(p,text){
+  const d=document.createElement("div");d.className="card";
+  let rows=(p.line_items||[]).map(li=>`<tr><td>${esc(li.description||"")}</td><td>${(li.gesamtpreis||0).toFixed(2)} €</td></tr>`).join("");
+  d.innerHTML=`<div class="title">${esc(p.title||p.variant_key)}</div>
+    <div class="muted">Klasse ${esc(p.variant_key)}</div>
+    <div class="total">${(p.gesamtbetrag||0).toFixed(2)} €</div>
+    <div>${md(text)}</div>
+    <table>${rows}</table>
+    <a class="dl" href="/api/document/${encodeURIComponent(p.variant_key)}" target="_blank">
+      ${lang==='de'?'📄 Preisblatt herunterladen (PDF)':'📄 Download price sheet (PDF)'}</a>`;
+  log.appendChild(d);scroll();
+}
+function scroll(){log.scrollTop=log.scrollHeight;}
+
+function render(r){
+  if(r.kind==="price"&&r.price){addCard(r.price,r.text);}
+  else{addBot(r.text,r.kind==="handoff"?"handoff":"");}
+  if(r.options&&r.options.length)addOptions(r.options);
+}
+
+async function startSession(){
+  const res=await fetch("/api/session?language="+lang,{method:"POST"});
+  const j=await res.json();sid=j.session_id;render(j.reply);
+}
+async function sendOption(key){
+  const res=await fetch("/api/message",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({session_id:sid,option_key:key})});
+  render((await res.json()).reply);
+}
+async function send(){
+  const t=inp.value.trim();if(!t)return;inp.value="";addUser(t);clearOptions();
+  const res=await fetch("/api/message",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({session_id:sid,text:t})});
+  render((await res.json()).reply);
+}
+function setLang(l){lang=l;document.getElementById("de").classList.toggle("active",l==="de");
+  document.getElementById("en").classList.toggle("active",l==="en");
+  inp.placeholder=T[l].ph;document.getElementById("sub").textContent=T[l].sub;
+  document.documentElement.lang=l;log.innerHTML="";startSession();}
+
+startSession();
+</script>
+</body>
+</html>

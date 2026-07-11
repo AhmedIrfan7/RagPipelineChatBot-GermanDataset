@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fahrschule-api",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "fahrschule.api:app", "--app-dir", "src", "--host", "127.0.0.1", "--port", "8123"],
+      "port": 8123
+    }
+  ]
+}
