@@ -7,6 +7,10 @@
 data/
 *.pdf
 *.PDF
+# Exception: the public, client-anonymous project documentation PDF (no prices, no
+# client PDFs, no PII inside it — verified before every commit). Everything else
+# matching *.pdf stays blocked.
+!docs/PROJECT_DOCUMENTATION.pdf
 
 # Extracted / derived client content (prices, business info) — confidential
 *.client.json
