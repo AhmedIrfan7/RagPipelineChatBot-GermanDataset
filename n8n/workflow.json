@@ -1,0 +1,741 @@
+{
+  "name": "Fahrschule Native Multi-Agent Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "mode": "webhook",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -2000,
+        500
+      ],
+      "name": "Chat Trigger",
+      "webhookId": "fahrschule-native-chat",
+      "id": "c1363759-86cb-419c-a2ac-9c8902a9302a"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1900,
+        900
+      ],
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "iOFiRdyfBWAfyBLQ",
+          "name": "Fahrschule OpenAI"
+        }
+      },
+      "id": "0154beb8-bfc1-4dff-9ac1-d87e0ed59bcf"
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1900,
+        1100
+      ],
+      "name": "OpenAI Embeddings",
+      "credentials": {
+        "openAiApi": {
+          "id": "iOFiRdyfBWAfyBLQ",
+          "name": "Fahrschule OpenAI"
+        }
+      },
+      "id": "ba6c44ef-8b4e-4f9f-bc98-f0152b3a31a5"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.chatInput }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Pricing",
+              "description": "Questions about course prices, costs, fees, discounts, or payment."
+            },
+            {
+              "category": "Timings",
+              "description": "Questions about addresses, opening hours, contact info, or locations."
+            },
+            {
+              "category": "Documents",
+              "description": "Questions about how to register/enroll, required documents, exam registration, or document validity."
+            },
+            {
+              "category": "Courses",
+              "description": "Questions about which courses or license classes are offered, course content, exam procedure, or simulator/VR training."
+            }
+          ]
+        },
+        "options": {
+          "multiClass": true,
+          "fallback": "other"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -1700,
+        500
+      ],
+      "name": "Intent Classifier",
+      "id": "654d1f52-77b6-4130-abbb-a6d0d9b4c26b"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve",
+        "qdrantCollection": {
+          "__rl": true,
+          "mode": "id",
+          "value": "pricing"
+        },
+        "options": {
+          "contentPayloadKey": "text"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1400,
+        100
+      ],
+      "name": "Pricing Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "0yyoWZb9YJlIqPnW",
+          "name": "Fahrschule Qdrant"
+        }
+      },
+      "id": "f6619e8e-0e5e-4bc0-b4ce-de2b04b230b1"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "typeVersion": 1,
+      "position": [
+        -1250,
+        100
+      ],
+      "name": "Pricing Retriever",
+      "id": "6677921b-fe1c-4aa0-b91a-bc8d945f96b5"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemPromptTemplate": "You answer PRICING questions for a German driving school using ONLY the retrieved context. Never estimate, round, calculate, or invent a discount or total. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team. Always state the price's effective date if it is given in the context.\n----------------\nContext: {context}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "typeVersion": 1.7,
+      "position": [
+        -1100,
+        100
+      ],
+      "name": "Pricing RAG Chain",
+      "id": "11febac3-d823-42bc-8168-a7546b2ff49f"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve",
+        "qdrantCollection": {
+          "__rl": true,
+          "mode": "id",
+          "value": "location_hours"
+        },
+        "options": {
+          "contentPayloadKey": "text"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1400,
+        320
+      ],
+      "name": "Timings Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "0yyoWZb9YJlIqPnW",
+          "name": "Fahrschule Qdrant"
+        }
+      },
+      "id": "aeffc6a2-69ae-4597-b7d8-c85c5642cf6b"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "typeVersion": 1,
+      "position": [
+        -1250,
+        320
+      ],
+      "name": "Timings Retriever",
+      "id": "3d8e830f-68da-4ad0-90c2-ce812d253000"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemPromptTemplate": "You answer LOCATION AND OPENING HOURS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "typeVersion": 1.7,
+      "position": [
+        -1100,
+        320
+      ],
+      "name": "Timings RAG Chain",
+      "id": "b511e1d1-246b-4f9e-a048-d38ca28ee16c"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve",
+        "qdrantCollection": {
+          "__rl": true,
+          "mode": "id",
+          "value": "registration_docs"
+        },
+        "options": {
+          "contentPayloadKey": "text"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1400,
+        540
+      ],
+      "name": "Documents Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "0yyoWZb9YJlIqPnW",
+          "name": "Fahrschule Qdrant"
+        }
+      },
+      "id": "2c350fb5-2417-4f8c-84d1-866320220100"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "typeVersion": 1,
+      "position": [
+        -1250,
+        540
+      ],
+      "name": "Documents Retriever",
+      "id": "d8f1b01f-4f00-4df8-b7ce-2627d8903f07"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemPromptTemplate": "You answer REGISTRATION AND REQUIRED-DOCUMENTS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "typeVersion": 1.7,
+      "position": [
+        -1100,
+        540
+      ],
+      "name": "Documents RAG Chain",
+      "id": "2fd4819c-e16e-46d6-9107-ae02f2813ff4"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve",
+        "qdrantCollection": {
+          "__rl": true,
+          "mode": "id",
+          "value": "courses_offerings"
+        },
+        "options": {
+          "contentPayloadKey": "text"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1400,
+        760
+      ],
+      "name": "Courses Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "0yyoWZb9YJlIqPnW",
+          "name": "Fahrschule Qdrant"
+        }
+      },
+      "id": "3246722a-43a0-420a-9e44-977bc618e7ba"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "typeVersion": 1,
+      "position": [
+        -1250,
+        760
+      ],
+      "name": "Courses Retriever",
+      "id": "c70d87c1-0d39-4490-84cd-849d87287beb"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemPromptTemplate": "You answer COURSE AND OFFERING questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "typeVersion": 1.7,
+      "position": [
+        -1100,
+        760
+      ],
+      "name": "Courses RAG Chain",
+      "id": "2bda02e4-00fe-49e7-a73e-d9e40d96e853"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve",
+        "qdrantCollection": {
+          "__rl": true,
+          "mode": "id",
+          "value": "general"
+        },
+        "options": {
+          "contentPayloadKey": "text"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -1400,
+        980
+      ],
+      "name": "Other Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "0yyoWZb9YJlIqPnW",
+          "name": "Fahrschule Qdrant"
+        }
+      },
+      "id": "b8cbb7ff-81d0-4567-9656-4ad5fce6ca37"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "typeVersion": 1,
+      "position": [
+        -1250,
+        980
+      ],
+      "name": "Other Retriever",
+      "id": "8eac26e7-1f59-49ef-b967-3edab81e6404"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemPromptTemplate": "You answer general company questions using ONLY the retrieved context. If nothing relevant was retrieved, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "typeVersion": 1.7,
+      "position": [
+        -1100,
+        980
+      ],
+      "name": "Other RAG Chain",
+      "id": "03ce73ff-04d0-4dc1-b675-16eab0ce23a7"
+    },
+    {
+      "parameters": {
+        "numberInputs": 5
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -600,
+        500
+      ],
+      "name": "Merge Answers",
+      "id": "8ebd08b6-5a26-4a1e-aeed-07546e39ed14"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateIndividualFields",
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "response"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        500
+      ],
+      "name": "Aggregate Answers",
+      "id": "0e3544a2-d053-4be1-b120-df9258108177"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the final response formatter for a German driving school chatbot. You receive one or more draft answers from specialist agents, plus the customer's original message. Combine them into ONE clean, professional, well-formatted reply in the same language as the customer's message (German or English). Do not add, remove, or alter any number, price, date, or fact from the draft answers, only merge, reformat, and improve the phrasing. If a draft says it is not certain, keep that uncertainty and the offer to connect with the team in the final reply.\n\nCustomer's message: {{ $('Chat Trigger').item.json.chatInput }}\n\nDraft answers:\n{{ ($json.response || []).join('\\n\\n') }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -200,
+        500
+      ],
+      "name": "Synthesizer",
+      "id": "a332339c-41dc-48f9-9cc8-c888dc82a57f"
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Intent Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Intent Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Pricing RAG Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Timings RAG Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Documents RAG Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Courses RAG Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Other RAG Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Synthesizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pricing Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Timings Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Documents Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Courses Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Other Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pricing Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Pricing Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pricing Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Pricing RAG Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pricing RAG Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge Answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timings Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Timings Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timings Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Timings RAG Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timings RAG Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge Answers",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Documents Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Documents Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Documents Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Documents RAG Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Documents RAG Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge Answers",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Courses Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Courses Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Courses Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Courses RAG Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Courses RAG Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge Answers",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Other Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Other Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Other Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Other RAG Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Other RAG Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge Answers",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Intent Classifier": {
+      "main": [
+        [
+          {
+            "node": "Pricing RAG Chain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Timings RAG Chain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Documents RAG Chain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Courses RAG Chain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Other RAG Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Answers": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Answers": {
+      "main": [
+        [
+          {
+            "node": "Synthesizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
+}

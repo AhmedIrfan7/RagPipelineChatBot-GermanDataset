@@ -17,6 +17,13 @@ data/
 processed/
 interim/
 
+# n8n orchestration layer: prepared chunks (real client prices/text) and any
+# exported Qdrant snapshots stay local. Only workflow.json, scripts, and docs are public.
+n8n/data/
+n8n/qdrant_storage/
+n8n/workflow_id.txt
+n8n/eval_results_raw.json
+
 # ---- Secrets / environment ----
 .env
 .env.*
