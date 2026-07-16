@@ -5,10 +5,23 @@ Retrieval QA Chain, Merge, Aggregate, and Basic LLM Chain nodes.
 
 Architecture:
   Chat Trigger
-    -> Intent Classifier (Text Classifier node; multiClass; categories Pricing,
-       Timings, Documents, Courses; unmatched -> "Other" fallback branch)
-       -> per matched category: Retrieval QA Chain (grounded in that category's
-          Qdrant collection via a Vector Store + Retriever pair)
+    -> Session Router (Code node; reads workflow static data to check whether this
+       session is mid pricing-disambiguation, so a short follow-up reply like
+       "Neuerwerb" or "Automatik" is not lost to a classifier that has no memory
+       of the previous turn)
+       -> Route Check (IF): mid-disambiguation -> straight to Pricing Agent,
+          bypassing the classifier for this turn
+                          -> otherwise -> Intent Classifier (Text Classifier node;
+          multiClass; categories Pricing, Timings, Documents, Courses; unmatched
+          -> "Other" fallback branch)
+             -> per matched category: Retrieval QA Chain (grounded in that
+                category's Qdrant collection via a Vector Store + Retriever pair),
+                except Pricing, which is a conversational Agent (session memory +
+                the price collection as a tool) so it can ask clarifying
+                questions across multiple turns before ever stating a price
+    -> (Pricing path only) Update Pricing State: marks the session as resolved
+       once the agent's reply contains a final stated total, otherwise leaves it
+       marked as still disambiguating for the Session Router to pick up next turn
     -> Merge (collects whichever branches fired)
     -> Aggregate (combines the per-branch answers into one item)
     -> Synthesizer (Basic LLM Chain; merges + polishes into one final reply,
@@ -40,7 +53,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BRANCHES = {
     "Pricing": (
         "pricing",
-        "Questions about course prices, costs, fees, discounts, or payment.",
+        "Questions about course prices, costs, fees, discounts, or payment. Also "
+        "includes short follow-up answers that continue an ongoing pricing "
+        "conversation, such as: new license vs special case (conversion, "
+        "re-issuance, school change); car only vs combined with another class; "
+        "manual vs automatic transmission; standard vs intensive vs simulator "
+        "course. Treat these short disambiguation replies as Pricing even without "
+        "the word 'price' in them.",
         "You answer PRICING questions for a German driving school using ONLY the "
         "retrieved context. Never estimate, round, calculate, or invent a discount "
         "or total. If the context does not clearly answer, say you are not certain "
@@ -71,6 +90,41 @@ BRANCHES = {
         "and offer to connect the customer with the team.",
     ),
 }
+PRICING_AGENT_PROMPT = (
+    "You are the Pricing specialist for a German driving school. You have a tool "
+    "that searches the official, verified price sheets. Many license classes have "
+    "several differently priced variants, most notably Class B, which has about "
+    "18 variants, so you must NEVER guess or average a price across variants.\n\n"
+    "Follow this exact process on every pricing question:\n"
+    "1. If the class or situation is not yet fully clear, ask ONE short "
+    "clarifying question at a time, in this order, skipping any step already "
+    "answered by the customer:\n"
+    "   a. Is this a new license, or a special case (converting a foreign "
+    "license, re-issuance after withdrawal, switching driving schools, or "
+    "removing an automatic-only restriction)?\n"
+    "   b. If new: do they want the class alone, or combined with another class "
+    "(for example a trailer, another vehicle class, or a tractor)?\n"
+    "   c. If the class alone (for Class B specifically): manual or automatic "
+    "transmission? (Automatic keeps manual entitlement too, this is the B197 "
+    "variant, and fully answers this question, no course-type question needed.)\n"
+    "   d. If manual: standard course, intensive course, or with simulator?\n"
+    "2. Only once exactly ONE specific variant is unambiguous, use the search "
+    "tool to retrieve its real price and state the exact total, the effective "
+    "date, and mention the official price sheet is available as a download.\n"
+    "3. Never state a price for a class that still has multiple possible "
+    "variants. Never invent, estimate, round, or calculate a discount. If the "
+    "tool does not return a clear answer, say you are not certain and offer to "
+    "connect the customer with the team.\n"
+    "4. Reply in the same language the customer is using (German or English), "
+    "and remember answers the customer already gave earlier in this "
+    "conversation, do not ask the same question twice.\n"
+    "5. You may be invoked directly for a message that is not actually about "
+    "pricing (this can happen when the routing defaults to you mid-conversation). "
+    "If the customer's message is clearly unrelated to a driving license price "
+    "(for example a new, different topic), say briefly that you handle pricing "
+    "questions and ask them to restate what they need."
+)
+
 FALLBACK_LABEL = "Other"
 FALLBACK_COLLECTION = "general"
 FALLBACK_PROMPT = (
@@ -155,6 +209,90 @@ def rag_branch_nodes(label: str, collection: str, system_prompt: str, x: float, 
     return nodes, vs_name, ret_name, chain_name
 
 
+UPDATE_STATE_CODE = r"""
+const store = $getWorkflowStaticData('global');
+if (!store.pricingSessions) store.pricingSessions = {};
+const sessionId = $('Chat Trigger').item.json.sessionId;
+const answer = $json.output || '';
+// A final priced answer states a concrete euro total; a clarifying question does not.
+const looksResolved = /\d[\d.]*,\d{2}\s*(€|EUR)/.test(answer);
+store.pricingSessions[sessionId] = !looksResolved;
+return $input.all();
+""".strip()
+
+ROUTER_CODE = r"""
+const store = $getWorkflowStaticData('global');
+const sessions = store.pricingSessions || {};
+const sessionId = $json.sessionId;
+const midPricing = sessions[sessionId] === true;
+return [{ json: { ...$json, _forcePricing: midPricing } }];
+""".strip()
+
+
+def pricing_agent_nodes(x: float, y: float, qdrant_cred: str) -> tuple[list[dict], str, str, str]:
+    """Vector Store (as a tool) + a conversational Agent with memory, replacing the
+    single-shot Retrieval QA Chain for Pricing so it can ask clarifying questions
+    across multiple turns before ever stating a price. A small state-update step
+    follows, recording (in workflow static data) whether this session is now
+    resolved (a real price was stated) or still mid disambiguation, so the Session
+    Router can force-route the next turn back here even though the Text Classifier
+    has no memory of its own. Returns (nodes, vector_store_name, agent_name,
+    normalize_name)."""
+    vs_name = "Pricing Vector Store"
+    agent_name = "Pricing Agent"
+    state_name = "Update Pricing State"
+    norm_name = "Pricing Answer (normalized)"
+    nodes = [
+        {
+            "parameters": {
+                "mode": "retrieve-as-tool",
+                "toolName": "search_price_sheets",
+                "toolDescription": (
+                    "Search the official, verified price sheets for German driving "
+                    "license courses. Input a specific class/variant description "
+                    "(for example 'Klasse B197' or 'Klasse BE'). Returns the exact "
+                    "line items, total price, and effective date for matching "
+                    "sheets. Only call this once the specific variant is known, "
+                    "not for a still-ambiguous class."
+                ),
+                "qdrantCollection": {"__rl": True, "mode": "id", "value": "pricing"},
+                "options": {"contentPayloadKey": "text"},
+            },
+            "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant", "typeVersion": 1.3,
+            "position": [x, y], "name": vs_name,
+            "credentials": {"qdrantApi": {"id": qdrant_cred, "name": "Fahrschule Qdrant"}},
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.chatInput }}",
+                "hasOutputParser": False,
+                "options": {"systemMessage": PRICING_AGENT_PROMPT},
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent", "typeVersion": 3.1,
+            "position": [x + 200, y], "name": agent_name,
+        },
+        {
+            "parameters": {"mode": "runOnceForAllItems", "jsCode": UPDATE_STATE_CODE},
+            "type": "n8n-nodes-base.code", "typeVersion": 2,
+            "position": [x + 350, y], "name": state_name,
+        },
+        {
+            "parameters": {
+                "mode": "manual",
+                "assignments": {"assignments": [{
+                    "id": "1", "name": "response", "type": "string",
+                    "value": "={{ $json.output }}",
+                }]},
+                "options": {},
+            },
+            "type": "n8n-nodes-base.set", "typeVersion": 3.4,
+            "position": [x + 500, y], "name": norm_name,
+        },
+    ]
+    return nodes, vs_name, agent_name, state_name, norm_name
+
+
 def build_workflow(e: dict) -> dict:
     nodes = []
     nodes.append({
@@ -188,13 +326,45 @@ def build_workflow(e: dict) -> dict:
         "type": "@n8n/n8n-nodes-langchain.textClassifier", "typeVersion": 1.1,
         "position": [-1700, 500], "name": "Intent Classifier",
     })
+    nodes.append({
+        "parameters": {
+            "sessionIdType": "customKey",
+            "sessionKey": "={{ $('Chat Trigger').item.json.sessionId }}",
+            "contextWindowLength": 12,
+        },
+        "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow", "typeVersion": 1.3,
+        "position": [-1500, 300], "name": "Session Memory",
+    })
+    nodes.append({
+        "parameters": {"mode": "runOnceForAllItems", "jsCode": ROUTER_CODE},
+        "type": "n8n-nodes-base.code", "typeVersion": 2,
+        "position": [-1900, 500], "name": "Session Router",
+    })
+    nodes.append({
+        "parameters": {"conditions": {
+            "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict", "version": 2},
+            "combinator": "and",
+            "conditions": [{
+                "id": "1", "operator": {"type": "boolean", "operation": "true", "singleValue": True},
+                "leftValue": "={{ $json._forcePricing }}", "rightValue": "",
+            }],
+        }},
+        "type": "n8n-nodes-base.if", "typeVersion": 2.3,
+        "position": [-1800, 500], "name": "Route Check",
+    })
 
     connections: dict = {
-        "Chat Trigger": {"main": [[{"node": "Intent Classifier", "type": "main", "index": 0}]]},
+        "Chat Trigger": {"main": [[{"node": "Session Router", "type": "main", "index": 0}]]},
+        "Session Router": {"main": [[{"node": "Route Check", "type": "main", "index": 0}]]},
+        "Route Check": {"main": [
+            [{"node": "Pricing Agent", "type": "main", "index": 0}],       # true: mid-disambiguation
+            [{"node": "Intent Classifier", "type": "main", "index": 0}],   # false: normal classification
+        ]},
         "OpenAI Chat Model": {"ai_languageModel": [[
             {"node": "Intent Classifier", "type": "ai_languageModel", "index": 0},
         ]]},
         "OpenAI Embeddings": {"ai_embedding": [[]]},
+        "Session Memory": {"ai_memory": [[{"node": "Pricing Agent", "type": "ai_memory", "index": 0}]]},
     }
 
     branch_labels = list(BRANCHES.keys()) + [FALLBACK_LABEL]
@@ -202,6 +372,23 @@ def build_workflow(e: dict) -> dict:
     merge_inputs = len(branch_labels)
     y0 = 100
     for i, label in enumerate(branch_labels):
+        if label == "Pricing":
+            branch_nodes, vs, endpoint, state, norm = pricing_agent_nodes(
+                -1400, y0 + i * 220, e["qdrant_cred"])
+            nodes.extend(branch_nodes)
+            # reachable two ways: directly from Route Check (forced) and from the
+            # classifier's own Pricing output (normal first-touch classification)
+            classifier_main.append([{"node": endpoint, "type": "main", "index": 0}])
+            connections["OpenAI Chat Model"]["ai_languageModel"][0].append(
+                {"node": endpoint, "type": "ai_languageModel", "index": 0})
+            connections["OpenAI Embeddings"]["ai_embedding"][0].append(
+                {"node": vs, "type": "ai_embedding", "index": 0})
+            connections[vs] = {"ai_tool": [[{"node": endpoint, "type": "ai_tool", "index": 0}]]}
+            connections[endpoint] = {"main": [[{"node": state, "type": "main", "index": 0}]]}
+            connections[state] = {"main": [[{"node": norm, "type": "main", "index": 0}]]}
+            connections[norm] = {"main": [[{"node": "Merge Answers", "type": "main", "index": i}]]}
+            continue
+
         if label == FALLBACK_LABEL:
             collection, sys_prompt = FALLBACK_COLLECTION, FALLBACK_PROMPT
         else:

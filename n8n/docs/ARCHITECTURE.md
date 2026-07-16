@@ -105,6 +105,83 @@ deterministic rule. A more clearly out-of-scope question ("Was sind eure Werte
 und wofür steht euer Unternehmen?") did correctly trigger the `Other` branch and
 retrieved the right company-values content.
 
+## Multi-turn follow-up questions for Pricing
+
+The first version of the Pricing branch used the same pattern as the other four
+categories, a single-shot Retrieval QA Chain: retrieve, answer, done. Testing it
+against a genuinely ambiguous question ("Was kostet Klasse B?", which has about
+18 differently priced variants) showed the real problem with that pattern: it
+retrieved several variants by similarity and described all of them in one
+answer, rather than asking which one the customer meant.
+
+This was fixed by rebuilding the Pricing branch as a conversational **Agent**
+node instead of a QA Chain, with two things a QA Chain does not have:
+
+- **Session memory** (`memoryBufferWindow`, keyed to the Chat Trigger's session
+  ID), so the agent remembers what the customer already answered earlier in the
+  conversation.
+- **The price collection as a callable tool** (`vectorStoreQdrant` in
+  `retrieve-as-tool` mode), rather than an automatic retrieval step, so the
+  agent only searches once it has narrowed the question down to one specific
+  variant, instead of retrieving broadly and describing whatever comes back.
+
+Its system prompt encodes the same disambiguation order the proven Python
+system uses: new license or special case, then alone or combined with another
+class, then manual or automatic transmission, then standard or intensive or
+simulator course, asking one question at a time and never stating a price until
+exactly one variant is unambiguous.
+
+**A second problem surfaced once memory was added**: the Text Classifier has no
+memory of its own, so a short follow-up reply like "Neuerwerb" or "Automatik"
+was sometimes classified as a fresh question about a different topic (observed
+live: "Neuerwerb, ein neuer Führerschein" was misrouted to the Documents branch,
+answering with registration paperwork instead of continuing the price
+conversation, silently dropping the disambiguation in progress). Since the
+branches only run when the classifier selects them, a misroute here means the
+Pricing Agent, and its memory, never even executes for that turn.
+
+The fix is a small `Session Router` step (a Code node) placed between the Chat
+Trigger and everything else, backed by workflow static data (a plain key/value
+store that persists across separate webhook calls, keyed by session ID, no
+database needed for this). It flags a session as "mid pricing disambiguation"
+whenever the Pricing Agent's last reply did not contain a stated total, and an
+`IF` node reads that flag every turn: if set, the message is sent straight to
+the Pricing Agent, bypassing the classifier entirely for that turn; otherwise
+classification proceeds as normal. A matching `Update Pricing State` step after
+the agent clears the flag once a reply contains a real euro total (matched with
+a simple regular expression against the retrieved price text, not inferred by
+the model), so the next unrelated message in the same session goes through
+normal classification again.
+
+Verified live, full transcript:
+
+```
+Was kostet Klasse B?
+  -> Ist das ein Neuerwerb oder ein Sonderfall?
+Neuerwerb, ein neuer Führerschein
+  -> Nur Pkw oder kombiniert mit einer anderen Klasse?
+Nur Auto, keine Kombination
+  -> Schaltung oder Automatik (B197)?
+Automatik
+  -> Gesamtbetrag 2.696,21 EUR, Preisstand 01.01.2025, externe Gebühren ca. 280 EUR,
+     Preisblatt zum Download.
+Wie sind eure Öffnungszeiten?      (same session, unrelated question)
+  -> correctly answered by the Timings branch, not stuck in pricing mode
+```
+
+The stated total, 2696.21 EUR, is exactly the golden value for variant B197.
+A second run in a fresh session with an unrelated ambiguous class ("Was kostet
+Klasse C?") also correctly began its own disambiguation from the first
+question, confirming state is isolated per session.
+
+This is a deliberately lightweight fix, not a full dialogue-state machine: it
+tracks one boolean per session (mid-disambiguation or not), not which question
+was last asked, and relies on the agent's own memory for that finer detail. A
+customer who abandons a pricing disambiguation mid-way and asks something
+unrelated will be held in the Pricing branch for one extra turn before the
+off-topic safety net in the agent's own prompt catches it, this is a known,
+acceptable simplification, not a fixed limitation of the pattern.
+
 ## The five categories, and what content is in each
 
 Reused as-is from the already-populated Qdrant collections (79 chunks total,

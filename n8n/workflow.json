@@ -15,7 +15,7 @@
       ],
       "name": "Chat Trigger",
       "webhookId": "fahrschule-native-chat",
-      "id": "c1363759-86cb-419c-a2ac-9c8902a9302a"
+      "id": "aaff54a0-2d73-4fc7-863b-dd43824bcd93"
     },
     {
       "parameters": {
@@ -40,7 +40,7 @@
           "name": "Fahrschule OpenAI"
         }
       },
-      "id": "0154beb8-bfc1-4dff-9ac1-d87e0ed59bcf"
+      "id": "2410f41c-4d92-40c5-bdcb-005bb22ef0b3"
     },
     {
       "parameters": {
@@ -60,7 +60,7 @@
           "name": "Fahrschule OpenAI"
         }
       },
-      "id": "ba6c44ef-8b4e-4f9f-bc98-f0152b3a31a5"
+      "id": "58764999-f3e4-4965-ada7-4547e77f87d8"
     },
     {
       "parameters": {
@@ -69,7 +69,7 @@
           "categories": [
             {
               "category": "Pricing",
-              "description": "Questions about course prices, costs, fees, discounts, or payment."
+              "description": "Questions about course prices, costs, fees, discounts, or payment. Also includes short follow-up answers that continue an ongoing pricing conversation, such as: new license vs special case (conversion, re-issuance, school change); car only vs combined with another class; manual vs automatic transmission; standard vs intensive vs simulator course. Treat these short disambiguation replies as Pricing even without the word 'price' in them."
             },
             {
               "category": "Timings",
@@ -97,11 +97,75 @@
         500
       ],
       "name": "Intent Classifier",
-      "id": "654d1f52-77b6-4130-abbb-a6d0d9b4c26b"
+      "id": "116baede-74e1-43a4-ad1a-ea07f4f1da08"
     },
     {
       "parameters": {
-        "mode": "retrieve",
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Chat Trigger').item.json.sessionId }}",
+        "contextWindowLength": 12
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1500,
+        300
+      ],
+      "name": "Session Memory",
+      "id": "56311812-7777-4363-8336-9fb3db42ef50"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const store = $getWorkflowStaticData('global');\nconst sessions = store.pricingSessions || {};\nconst sessionId = $json.sessionId;\nconst midPricing = sessions[sessionId] === true;\nreturn [{ json: { ...$json, _forcePricing: midPricing } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1900,
+        500
+      ],
+      "name": "Session Router",
+      "id": "73a0f2df-6cd8-4d8a-8bb7-9e2e389ae894"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json._forcePricing }}",
+              "rightValue": ""
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1800,
+        500
+      ],
+      "name": "Route Check",
+      "id": "ff90f191-842b-4ec7-b110-ec50808118cd"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "search_price_sheets",
+        "toolDescription": "Search the official, verified price sheets for German driving license courses. Input a specific class/variant description (for example 'Klasse B197' or 'Klasse BE'). Returns the exact line items, total price, and effective date for matching sheets. Only call this once the specific variant is known, not for a still-ambiguous class.",
         "qdrantCollection": {
           "__rl": true,
           "mode": "id",
@@ -124,35 +188,63 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "f6619e8e-0e5e-4bc0-b4ce-de2b04b230b1"
-    },
-    {
-      "parameters": {},
-      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
-      "typeVersion": 1,
-      "position": [
-        -1250,
-        100
-      ],
-      "name": "Pricing Retriever",
-      "id": "6677921b-fe1c-4aa0-b91a-bc8d945f96b5"
+      "id": "dd8a219f-e6ee-4c55-8015-06794ec7ae3e"
     },
     {
       "parameters": {
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
+        "hasOutputParser": false,
         "options": {
-          "systemPromptTemplate": "You answer PRICING questions for a German driving school using ONLY the retrieved context. Never estimate, round, calculate, or invent a discount or total. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team. Always state the price's effective date if it is given in the context.\n----------------\nContext: {context}"
+          "systemMessage": "You are the Pricing specialist for a German driving school. You have a tool that searches the official, verified price sheets. Many license classes have several differently priced variants, most notably Class B, which has about 18 variants, so you must NEVER guess or average a price across variants.\n\nFollow this exact process on every pricing question:\n1. If the class or situation is not yet fully clear, ask ONE short clarifying question at a time, in this order, skipping any step already answered by the customer:\n   a. Is this a new license, or a special case (converting a foreign license, re-issuance after withdrawal, switching driving schools, or removing an automatic-only restriction)?\n   b. If new: do they want the class alone, or combined with another class (for example a trailer, another vehicle class, or a tractor)?\n   c. If the class alone (for Class B specifically): manual or automatic transmission? (Automatic keeps manual entitlement too, this is the B197 variant, and fully answers this question, no course-type question needed.)\n   d. If manual: standard course, intensive course, or with simulator?\n2. Only once exactly ONE specific variant is unambiguous, use the search tool to retrieve its real price and state the exact total, the effective date, and mention the official price sheet is available as a download.\n3. Never state a price for a class that still has multiple possible variants. Never invent, estimate, round, or calculate a discount. If the tool does not return a clear answer, say you are not certain and offer to connect the customer with the team.\n4. Reply in the same language the customer is using (German or English), and remember answers the customer already gave earlier in this conversation, do not ask the same question twice.\n5. You may be invoked directly for a message that is not actually about pricing (this can happen when the routing defaults to you mid-conversation). If the customer's message is clearly unrelated to a driving license price (for example a new, different topic), say briefly that you handle pricing questions and ask them to restate what they need."
         }
       },
-      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
-      "typeVersion": 1.7,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
       "position": [
-        -1100,
+        -1200,
         100
       ],
-      "name": "Pricing RAG Chain",
-      "id": "11febac3-d823-42bc-8168-a7546b2ff49f"
+      "name": "Pricing Agent",
+      "id": "d4d32623-d6a6-457d-a6a1-7ae2951ca5ca"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const store = $getWorkflowStaticData('global');\nif (!store.pricingSessions) store.pricingSessions = {};\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst answer = $json.output || '';\n// A final priced answer states a concrete euro total; a clarifying question does not.\nconst looksResolved = /\\d[\\d.]*,\\d{2}\\s*(€|EUR)/.test(answer);\nstore.pricingSessions[sessionId] = !looksResolved;\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1050,
+        100
+      ],
+      "name": "Update Pricing State",
+      "id": "cb0a852d-02a4-4309-833f-130b7263d124"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "response",
+              "type": "string",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -900,
+        100
+      ],
+      "name": "Pricing Answer (normalized)",
+      "id": "4eda5515-b239-43d8-9c24-cb3ea03dd3a3"
     },
     {
       "parameters": {
@@ -179,7 +271,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "aeffc6a2-69ae-4597-b7d8-c85c5642cf6b"
+      "id": "58e9f100-1cf4-4c14-b45a-34f2ec1bd241"
     },
     {
       "parameters": {},
@@ -190,7 +282,7 @@
         320
       ],
       "name": "Timings Retriever",
-      "id": "3d8e830f-68da-4ad0-90c2-ce812d253000"
+      "id": "d2e70a0a-8ade-4ec7-a436-575707d175cc"
     },
     {
       "parameters": {
@@ -207,7 +299,7 @@
         320
       ],
       "name": "Timings RAG Chain",
-      "id": "b511e1d1-246b-4f9e-a048-d38ca28ee16c"
+      "id": "466e1962-635f-43d6-936f-b4ce4493e872"
     },
     {
       "parameters": {
@@ -234,7 +326,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "2c350fb5-2417-4f8c-84d1-866320220100"
+      "id": "717da857-338b-4529-9ac6-c40d819321d8"
     },
     {
       "parameters": {},
@@ -245,7 +337,7 @@
         540
       ],
       "name": "Documents Retriever",
-      "id": "d8f1b01f-4f00-4df8-b7ce-2627d8903f07"
+      "id": "0952dc5d-72a8-47ea-92e2-86b8beff52b6"
     },
     {
       "parameters": {
@@ -262,7 +354,7 @@
         540
       ],
       "name": "Documents RAG Chain",
-      "id": "2fd4819c-e16e-46d6-9107-ae02f2813ff4"
+      "id": "410e2f71-c48c-4479-a97f-cd37b9802297"
     },
     {
       "parameters": {
@@ -289,7 +381,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "3246722a-43a0-420a-9e44-977bc618e7ba"
+      "id": "fea69ba4-58ae-4f68-8715-e910304f268f"
     },
     {
       "parameters": {},
@@ -300,7 +392,7 @@
         760
       ],
       "name": "Courses Retriever",
-      "id": "c70d87c1-0d39-4490-84cd-849d87287beb"
+      "id": "a4d11ef2-38ab-4a32-bd2f-d095e2b0674e"
     },
     {
       "parameters": {
@@ -317,7 +409,7 @@
         760
       ],
       "name": "Courses RAG Chain",
-      "id": "2bda02e4-00fe-49e7-a73e-d9e40d96e853"
+      "id": "fb608067-787d-4358-85fc-0cead3750f90"
     },
     {
       "parameters": {
@@ -344,7 +436,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "b8cbb7ff-81d0-4567-9656-4ad5fce6ca37"
+      "id": "13428f6f-b172-4ea6-9ee0-72f4dd012394"
     },
     {
       "parameters": {},
@@ -355,7 +447,7 @@
         980
       ],
       "name": "Other Retriever",
-      "id": "8eac26e7-1f59-49ef-b967-3edab81e6404"
+      "id": "fb85ecde-7169-4b7d-bdac-fd1a25259ae2"
     },
     {
       "parameters": {
@@ -372,7 +464,7 @@
         980
       ],
       "name": "Other RAG Chain",
-      "id": "03ce73ff-04d0-4dc1-b675-16eab0ce23a7"
+      "id": "8a07306c-d035-40f4-a35d-2da7590ab2e5"
     },
     {
       "parameters": {
@@ -385,7 +477,7 @@
         500
       ],
       "name": "Merge Answers",
-      "id": "8ebd08b6-5a26-4a1e-aeed-07546e39ed14"
+      "id": "c8ebaebd-f915-4880-9716-e6be6bc6069e"
     },
     {
       "parameters": {
@@ -405,7 +497,7 @@
         500
       ],
       "name": "Aggregate Answers",
-      "id": "0e3544a2-d053-4be1-b120-df9258108177"
+      "id": "bce88663-94b0-40d8-9a29-95f482a9a582"
     },
     {
       "parameters": {
@@ -419,12 +511,41 @@
         500
       ],
       "name": "Synthesizer",
-      "id": "a332339c-41dc-48f9-9cc8-c888dc82a57f"
+      "id": "27447314-54ef-4dee-ab01-220175b9c938"
     }
   ],
   "connections": {
     "Chat Trigger": {
       "main": [
+        [
+          {
+            "node": "Session Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session Router": {
+      "main": [
+        [
+          {
+            "node": "Route Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Check": {
+      "main": [
+        [
+          {
+            "node": "Pricing Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Intent Classifier",
@@ -443,7 +564,7 @@
             "index": 0
           },
           {
-            "node": "Pricing RAG Chain",
+            "node": "Pricing Agent",
             "type": "ai_languageModel",
             "index": 0
           },
@@ -506,29 +627,51 @@
         ]
       ]
     },
+    "Session Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Pricing Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Pricing Vector Store": {
-      "ai_vectorStore": [
+      "ai_tool": [
         [
           {
-            "node": "Pricing Retriever",
-            "type": "ai_vectorStore",
+            "node": "Pricing Agent",
+            "type": "ai_tool",
             "index": 0
           }
         ]
       ]
     },
-    "Pricing Retriever": {
-      "ai_retriever": [
+    "Pricing Agent": {
+      "main": [
         [
           {
-            "node": "Pricing RAG Chain",
-            "type": "ai_retriever",
+            "node": "Update Pricing State",
+            "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Pricing RAG Chain": {
+    "Update Pricing State": {
+      "main": [
+        [
+          {
+            "node": "Pricing Answer (normalized)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pricing Answer (normalized)": {
       "main": [
         [
           {
@@ -675,7 +818,7 @@
       "main": [
         [
           {
-            "node": "Pricing RAG Chain",
+            "node": "Pricing Agent",
             "type": "main",
             "index": 0
           }
