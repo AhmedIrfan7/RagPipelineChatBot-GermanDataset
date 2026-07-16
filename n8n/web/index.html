@@ -212,20 +212,40 @@ function showTyping(){
 // literal " - " (e.g. "1. Pruefung Theorie - MOFA"), so no fixed pattern
 // can reliably tell a bullet separator from a label's own hyphen. Falls
 // back gracefully if a pattern isn't present.
+// The captured total may already carry a currency symbol on either side
+// ("236,96 EUR", "€236.96"), so strip any currency + surrounding whitespace
+// and append a single trailing " €". The number itself stays in whatever
+// locale style the reply used, matching the surrounding prose the user is
+// already reading below.
+function formatTotal(raw){
+  const bare = raw.replace(/€|EUR/g, "").trim();
+  return bare + " €";
+}
+
 function parsePriceInfo(text){
-  // Anchor the total to a labelling keyword ("Gesamtbetrag", "Gesamtpreis",
-  // "insgesamt", "Total") so we don't accidentally headline the first
-  // line-item amount (e.g. "Grundbetrag Mofa: 209,00 EUR" appearing before
-  // the real total further down). Fall back to the LAST euro amount if no
-  // keyword matches, since totals conventionally come at the end of a
-  // priced answer.
-  const anchored = text.match(/(?:Gesamtbetrag|Gesamtpreis|insgesamt|Total)[^\d]{0,30}(\d[\d.]*,\d{2})\s*(?:€|EUR)/i);
-  let total = anchored ? anchored[1] : null;
-  if (!total) {
-    const all = [...text.matchAll(/(\d[\d.]*,\d{2})\s*(?:€|EUR)/g)];
-    total = all.length ? all[all.length - 1][1] : null;
+  // Anchor the total to a labelling keyword (DE: Gesamtbetrag/Gesamtpreis/
+  // insgesamt; EN: Total/Total amount/comes to) so we don't accidentally
+  // headline the first line-item amount (e.g. "Grundbetrag Mofa: 209,00 EUR"
+  // appearing before the real total further down). Fall back to the LAST
+  // euro amount if no keyword matches, since totals conventionally come at
+  // the end of a priced answer. Accepts both German ("236,96 EUR" /
+  // "236,96 €") and English ("€236.96" / "EUR 236.96") formatting because
+  // the Synthesizer localises number style to the reply language.
+  const amountBoth = "(?:\\d[\\d.,]*[.,]\\d{2}\\s*(?:€|EUR)|(?:€|EUR)\\s*\\d[\\d.,]*[.,]\\d{2})";
+  const anchor = "(?:Gesamtbetrag|Gesamtpreis|insgesamt|Total(?:\\s+amount)?|comes\\s+to)";
+  const anchoredRe = new RegExp(anchor + "[^\\d€]{0,30}(" + amountBoth + ")", "i");
+  const anyRe = new RegExp("(" + amountBoth + ")", "g");
+  const stripLabel = s => s.replace(/€|EUR|\s/g, "");
+  const anchored = text.match(anchoredRe);
+  let raw = anchored ? anchored[1] : null;
+  if (!raw) {
+    const all = [...text.matchAll(anyRe)];
+    raw = all.length ? all[all.length - 1][1] : null;
   }
-  const dateMatch = text.match(/(\d{2}\.\d{2}\.\d{4})/);
+  // Present the number in whatever style the reply used, since that's what
+  // the user is already reading below.
+  const total = raw ? raw.trim() : null;
+  const dateMatch = text.match(/(\d{2}\.\d{2}\.\d{4}|(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4})/i);
   return { total, date: dateMatch ? dateMatch[1] : null };
 }
 
@@ -239,7 +259,7 @@ function addPriceCard(text, documentFile){
     <div class="rule"></div>
     <div class="body">
       <div class="eyebrow"><span>${esc(T[lang].total)}</span>${info.date ? `<span class="stamp">${esc(T[lang].stand)}: ${esc(info.date)}</span>` : ""}</div>
-      <div class="total">${info.total ? esc(info.total) + " €" : "–"}</div>
+      <div class="total">${info.total ? esc(formatTotal(info.total)) : "–"}</div>
       <div class="fees">${esc(text)}</div>
       ${documentFile ? `<a class="dl-btn" href="${PDF_BASE_URL}${encodeURIComponent(documentFile)}" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
@@ -265,7 +285,7 @@ async function send(message){
     const res = await fetch(WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chatInput: message, sessionId }),
+      body: JSON.stringify({ chatInput: message, sessionId, lang }),
     });
     const data = await res.json();
     typing.remove();

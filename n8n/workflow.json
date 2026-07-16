@@ -17,7 +17,7 @@
       ],
       "name": "Chat Trigger",
       "webhookId": "fahrschule-native-chat",
-      "id": "b6fbf633-c5be-46d6-98b7-b012af7189d3"
+      "id": "c3a76037-815d-4d9c-921d-b2d74c55fd87"
     },
     {
       "parameters": {
@@ -41,7 +41,7 @@
           "name": "Fahrschule OpenAI"
         }
       },
-      "id": "d879d9cd-1317-4114-9f96-6bc182acda83"
+      "id": "7958f377-76f9-4539-870f-0bcec8b976e1"
     },
     {
       "parameters": {
@@ -60,7 +60,7 @@
           "name": "Fahrschule OpenAI"
         }
       },
-      "id": "91904595-4e92-4cad-89e8-39078cd37b4b"
+      "id": "f5091c88-87c3-4aed-829e-aa8fe1971140"
     },
     {
       "parameters": {
@@ -97,7 +97,7 @@
         500
       ],
       "name": "Intent Classifier",
-      "id": "e65d8048-c536-40ad-bc05-29b31358ff1b"
+      "id": "b20f12f1-45d3-4056-ba51-58b41fc581c5"
     },
     {
       "parameters": {
@@ -112,7 +112,7 @@
         300
       ],
       "name": "Session Memory",
-      "id": "7dde4312-ab44-4c67-a89b-0abbfebe31ae"
+      "id": "9a5eda60-e97a-43ca-b8b1-98cb2ed11dc9"
     },
     {
       "parameters": {
@@ -126,7 +126,7 @@
         500
       ],
       "name": "Session Router",
-      "id": "d16b6bdf-910b-44c0-91da-9368e4276b51"
+      "id": "55348ef8-6934-499c-947f-23972ad02a83"
     },
     {
       "parameters": {
@@ -159,7 +159,7 @@
         500
       ],
       "name": "Route Check",
-      "id": "7f6b60f6-9a9f-4dd0-a06e-fd1fbec9695f"
+      "id": "6ab2beb3-8f2a-47b8-abc8-11d1d7f6913f"
     },
     {
       "parameters": {
@@ -187,7 +187,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "6fee9f0f-29ed-4354-8f97-99a853cab98d"
+      "id": "34392136-52b6-4924-9909-37e5feb5c932"
     },
     {
       "parameters": {
@@ -195,7 +195,7 @@
         "text": "={{ $json.chatInput }}",
         "hasOutputParser": false,
         "options": {
-          "systemMessage": "You are the Pricing specialist for a German driving school. You have a tool that searches the official, verified price sheets. Some license classes have only one priced variant (for example Mofa, AM, A1, A2, L, T, or a variant the customer already named exactly, like BE or B197). Others have several differently priced variants, most notably Class B, which has about 18, so you must NEVER guess or average a price across variants.\n\nFollow this exact process on every pricing question:\n1. First decide whether the class actually needs disambiguation. If the customer named a class that only has one variant, or already named a specific variant exactly, skip straight to step 2, do not invent clarifying questions that do not apply to that class.\n2. If, and only if, the class genuinely has multiple priced variants and it is not yet clear which one, ask ONE short clarifying question at a time, in this order, skipping any step already answered by the customer:\n   a. Is this a new license, or a special case (converting a foreign license, re-issuance after withdrawal, switching driving schools, or removing an automatic-only restriction)?\n   b. If new: do they want the class alone, or combined with another class (for example a trailer, another vehicle class, or a tractor)?\n   c. If the class alone (for Class B specifically): manual or automatic transmission? (Automatic keeps manual entitlement too, this is the B197 variant, and fully answers this question, no course-type question needed.)\n   d. If manual: standard course, intensive course, or with simulator?\n3. Once exactly ONE specific variant is clear (whether immediately, from step 1, or after disambiguating in step 2), use the search tool to retrieve its real price and state the exact total and the effective date, and mention the official price sheet is available as a download.\n4. Never state a price for a class that still has multiple possible variants. Never invent, estimate, round, or calculate a discount. If the tool does not return a clear answer, say you are not certain and offer to connect the customer with the team.\n5. Reply in the same language the customer is using (German or English), and remember answers the customer already gave earlier in this conversation, do not ask the same question twice.\n6. You may be invoked directly for a message that is not actually about pricing (this can happen when the routing defaults to you mid-conversation). If the customer's message is clearly unrelated to any driving license topic at all (for example a completely different subject), say briefly that you handle pricing questions and ask them to restate what they need. A question naming a license class or course is on-topic even if you are not yet sure exactly what it needs, in that case follow steps 1 to 3 instead of treating it as off-topic.",
+          "systemMessage": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou are the Pricing specialist for a German driving school. You have a tool that searches the official, verified price sheets. Some license classes have only one priced variant (for example Mofa, AM, A1, A2, L, T, or a variant the customer already named exactly, like BE or B197). Others have several differently priced variants, most notably Class B, which has about 18, so you must NEVER guess or average a price across variants.\n\nFollow this exact process on every pricing question:\n1. First decide whether the class actually needs disambiguation. If the customer named a class that only has one variant, or already named a specific variant exactly, skip straight to step 2, do not invent clarifying questions that do not apply to that class.\n2. If, and only if, the class genuinely has multiple priced variants and it is not yet clear which one, ask ONE short clarifying question at a time, in this order, skipping any step already answered by the customer:\n   a. Is this a new license, or a special case (converting a foreign license, re-issuance after withdrawal, switching driving schools, or removing an automatic-only restriction)?\n   b. If new: do they want the class alone, or combined with another class (for example a trailer, another vehicle class, or a tractor)?\n   c. If the class alone (for Class B specifically): manual or automatic transmission? (Automatic keeps manual entitlement too, this is the B197 variant, and fully answers this question, no course-type question needed.)\n   d. If manual: standard course, intensive course, or with simulator?\n3. Once exactly ONE specific variant is clear (whether immediately, from step 1, or after disambiguating in step 2), use the search tool to retrieve its real price and state the exact total and the effective date, and mention the official price sheet is available as a download.\n4. Never state a price for a class that still has multiple possible variants. Never invent, estimate, round, or calculate a discount. If the tool does not return a clear answer, say you are not certain and offer to connect the customer with the team.\n5. Remember answers the customer already gave earlier in this conversation, do not ask the same question twice.\n6. You may be invoked directly for a message that is not actually about pricing (this can happen when the routing defaults to you mid-conversation). If the customer's message is clearly unrelated to any driving license topic at all (for example a completely different subject), say briefly that you handle pricing questions and ask them to restate what they need. A question naming a license class or course is on-topic even if you are not yet sure exactly what it needs, in that case follow steps 1 to 3 instead of treating it as off-topic.",
           "returnIntermediateSteps": true
         }
       },
@@ -206,12 +206,12 @@
         100
       ],
       "name": "Pricing Agent",
-      "id": "f0bf3c42-4904-4182-a4a2-aad45fac3cb3"
+      "id": "f7127672-8b83-471c-9fcb-6a79d2ef9625"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const store = $getWorkflowStaticData('global');\nif (!store.pricingSessions) store.pricingSessions = {};\nif (!store.lastDocument) store.lastDocument = {};\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst answer = $json.output || '';\n\n// Extract the source PDF filename from the actual retrieved tool content\n// (returnIntermediateSteps=true on the Agent node), not from the model's own\n// prose, so this does not depend on the LLM remembering to cite it correctly\n// every time. The pricing chunk text always contains this exact line (see\n// scripts/01_prepare_pricing_chunks.py), so a match here is deterministic.\nconst filenameRe = /Quelldokument \\(offizielles Preisblatt\\):\\s*([^\\n]+?\\.pdf)/i;\nlet pdfFile = null;\nconst steps = $json.intermediateSteps;\nif (Array.isArray(steps)) {\n  for (const step of steps) {\n    const observation = (step && (step.observation || step.output)) || '';\n    const text = typeof observation === 'string' ? observation : JSON.stringify(observation);\n    const m = text.match(filenameRe);\n    if (m) pdfFile = m[1].trim();  // keep the last (most recent) match if several\n  }\n}\n\n// A final priced answer states a concrete euro total; a clarifying question does not.\nconst looksResolved = /\\d[\\d.]*,\\d{2}\\s*(€|EUR)/.test(answer);\nstore.pricingSessions[sessionId] = !looksResolved;\nstore.lastDocument[sessionId] = looksResolved ? pdfFile : null;\n\nreturn $input.all();"
+        "jsCode": "const store = $getWorkflowStaticData('global');\nif (!store.pricingSessions) store.pricingSessions = {};\nif (!store.lastDocument) store.lastDocument = {};\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst answer = $json.output || '';\n\n// Extract the source PDF filename from the actual retrieved tool content\n// (returnIntermediateSteps=true on the Agent node), not from the model's own\n// prose, so this does not depend on the LLM remembering to cite it correctly\n// every time. The pricing chunk text always contains this exact line (see\n// scripts/01_prepare_pricing_chunks.py), so a match here is deterministic.\nconst filenameRe = /Quelldokument \\(offizielles Preisblatt\\):\\s*([^\\n]+?\\.pdf)/i;\nlet pdfFile = null;\nconst steps = $json.intermediateSteps;\nif (Array.isArray(steps)) {\n  for (const step of steps) {\n    const observation = (step && (step.observation || step.output)) || '';\n    const text = typeof observation === 'string' ? observation : JSON.stringify(observation);\n    const m = text.match(filenameRe);\n    if (m) pdfFile = m[1].trim();  // keep the last (most recent) match if several\n  }\n}\n\n// A final priced answer states a concrete euro total; a clarifying question does not.\n// Match both German (\"236,96 EUR\" / \"236,96 €\") and English (\"€236.96\" / \"EUR 236.96\")\n// formatting, since the Synthesizer localises the number style to the reply language.\nconst looksResolved = /(?:\\d[\\d.,]*[.,]\\d{2}\\s*(?:€|EUR)|(?:€|EUR)\\s*\\d[\\d.,]*[.,]\\d{2})/.test(answer);\nstore.pricingSessions[sessionId] = !looksResolved;\nstore.lastDocument[sessionId] = looksResolved ? pdfFile : null;\n\nreturn $input.all();"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -220,7 +220,7 @@
         100
       ],
       "name": "Update Pricing State",
-      "id": "41b010b4-4b73-4e46-ad60-d67b0b074ead"
+      "id": "67d4d988-2b65-41a2-ba5e-6570ac737170"
     },
     {
       "parameters": {
@@ -244,7 +244,7 @@
         100
       ],
       "name": "Pricing Answer (normalized)",
-      "id": "80bc47b6-9aa1-4a1d-809c-e8ed1bc2d2b4"
+      "id": "f2f7b1b8-db97-4794-b22a-5306925ddaa9"
     },
     {
       "parameters": {
@@ -270,7 +270,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "634e35f3-394f-4d55-85e6-3a08d0675e0c"
+      "id": "41b78705-5a30-49e5-bf51-c2be2d5e7604"
     },
     {
       "parameters": {},
@@ -281,14 +281,14 @@
         320
       ],
       "name": "Timings Retriever",
-      "id": "943ef81a-3b5e-4fcd-aa02-a29d83631180"
+      "id": "8abc432f-dff8-4d03-8cde-76dede8cea1a"
     },
     {
       "parameters": {
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemPromptTemplate": "You answer LOCATION AND OPENING HOURS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+          "systemPromptTemplate": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou answer LOCATION AND OPENING HOURS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
@@ -298,7 +298,7 @@
         320
       ],
       "name": "Timings RAG Chain",
-      "id": "2fcf574e-6d46-4de2-8c9d-5268a8269a3f"
+      "id": "161ad2e2-a6ce-41e9-a456-d8f9df5dbc3f"
     },
     {
       "parameters": {
@@ -324,7 +324,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "c449893c-ef54-4b7a-90a2-98a951d576bf"
+      "id": "9e77d166-ae27-4acf-97ee-dac14a9351e3"
     },
     {
       "parameters": {},
@@ -335,14 +335,14 @@
         540
       ],
       "name": "Documents Retriever",
-      "id": "84dda385-16fd-43ad-9ec4-5e6ec1780bee"
+      "id": "b4726765-0911-4d74-873b-e3fe3147f63f"
     },
     {
       "parameters": {
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemPromptTemplate": "You answer REGISTRATION AND REQUIRED-DOCUMENTS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+          "systemPromptTemplate": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou answer REGISTRATION AND REQUIRED-DOCUMENTS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
@@ -352,7 +352,7 @@
         540
       ],
       "name": "Documents RAG Chain",
-      "id": "d1575b76-3f52-45fc-8313-89c24cafa9aa"
+      "id": "b4dda79a-03d6-4595-9c82-d46342ab73b5"
     },
     {
       "parameters": {
@@ -378,7 +378,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "ebaf7899-7479-495d-9365-98fbe51d6fb5"
+      "id": "63539c89-1a2c-4cbb-9213-ebc9ebdcc8c5"
     },
     {
       "parameters": {},
@@ -389,14 +389,14 @@
         760
       ],
       "name": "Courses Retriever",
-      "id": "b876f714-af03-4a6d-918f-b442c75a995d"
+      "id": "e29d40b3-22f7-413e-905a-1cc62fbe5a3e"
     },
     {
       "parameters": {
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemPromptTemplate": "You answer COURSE AND OFFERING questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+          "systemPromptTemplate": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou answer COURSE AND OFFERING questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
@@ -406,7 +406,7 @@
         760
       ],
       "name": "Courses RAG Chain",
-      "id": "6c429264-34a3-4734-b6c4-7841846126a0"
+      "id": "53a11ca3-dda6-4a1e-8cec-2a916c394bf7"
     },
     {
       "parameters": {
@@ -432,7 +432,7 @@
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "bacb5b56-f61c-42ff-a753-e7a40e0e0e96"
+      "id": "485ec1f9-367e-473b-a42f-14ac4aca3506"
     },
     {
       "parameters": {},
@@ -443,14 +443,14 @@
         980
       ],
       "name": "Other Retriever",
-      "id": "070a16ca-91ef-4d44-8779-caee2d1d43a9"
+      "id": "75963ef1-3757-4ac1-9838-2bf32b423d6a"
     },
     {
       "parameters": {
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemPromptTemplate": "You answer general company questions using ONLY the retrieved context. If nothing relevant was retrieved, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+          "systemPromptTemplate": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou answer general company questions using ONLY the retrieved context. If nothing relevant was retrieved, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
@@ -460,7 +460,7 @@
         980
       ],
       "name": "Other RAG Chain",
-      "id": "0ceef78b-d534-4f58-9c52-c5a641f96a5f"
+      "id": "fe0aaf94-30a3-4288-94fe-ee1555bac4b6"
     },
     {
       "parameters": {
@@ -473,7 +473,7 @@
         500
       ],
       "name": "Merge Answers",
-      "id": "65e993d6-60b2-4710-88e4-475a7dbf2674"
+      "id": "bc46064e-e497-42fc-b367-de650f5fea49"
     },
     {
       "parameters": {
@@ -493,12 +493,12 @@
         500
       ],
       "name": "Aggregate Answers",
-      "id": "5d1a76ca-4532-4222-b4af-d6f7c3575cf3"
+      "id": "28407178-d4b2-472a-ae9d-124f179811e5"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are the final response formatter for a German driving school chatbot. You receive one or more draft answers from specialist agents, plus the customer's original message. Combine them into ONE clean, professional, well-formatted reply in the same language as the customer's message (German or English). Do not add, remove, or alter any number, price, date, or fact from the draft answers, only merge, reformat, and improve the phrasing. If a draft says it is not certain, keep that uncertainty and the offer to connect with the team in the final reply.\n\nCustomer's message: {{ $('Chat Trigger').item.json.chatInput }}\n\nDraft answers:\n{{ ($json.response || []).join('\\n\\n') }}"
+        "text": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou are the final response formatter for a German driving school chatbot. You receive one or more draft answers from specialist agents, plus the customer's original message. Combine them into ONE clean, professional, well-formatted reply. Do not add, remove, or alter any number, price, date, or fact from the draft answers, only merge, reformat, translate if needed to match the required response language above, and improve the phrasing. If a draft says it is not certain, keep that uncertainty and the offer to connect with the team in the final reply.\n\nCustomer's message: {{ $('Chat Trigger').item.json.chatInput }}\n\nDraft answers:\n{{ ($json.response || []).join('\\n\\n') }}"
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.9,
@@ -507,7 +507,7 @@
         500
       ],
       "name": "Synthesizer",
-      "id": "189d96d3-2d11-400e-b54f-e7c6c53716b6"
+      "id": "d25ba15b-fa6a-43dd-97f6-c39fbc018d1e"
     },
     {
       "parameters": {
@@ -521,7 +521,7 @@
         500
       ],
       "name": "Attach Document Link",
-      "id": "b54b7551-6c33-4942-99a5-e36d7c9a0fe6"
+      "id": "c45351c9-674e-4616-86db-c5272957ec4e"
     }
   ],
   "connections": {
@@ -897,12 +897,12 @@
       ]
     }
   },
-  "activeVersionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
-  "versionCounter": 255,
+  "activeVersionId": "f4139b82-ad83-458d-a85d-7931c4668ade",
+  "versionCounter": 310,
   "activeVersion": {
-    "updatedAt": "2026-07-16T18:38:57.546Z",
-    "createdAt": "2026-07-16T18:38:57.546Z",
-    "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+    "updatedAt": "2026-07-16T19:25:02.146Z",
+    "createdAt": "2026-07-16T19:25:02.146Z",
+    "versionId": "f4139b82-ad83-458d-a85d-7931c4668ade",
     "workflowId": "iPLMB3TIMwngEDDU",
     "nodes": [
       {
@@ -919,7 +919,7 @@
         ],
         "name": "Chat Trigger",
         "webhookId": "fahrschule-native-chat",
-        "id": "b6fbf633-c5be-46d6-98b7-b012af7189d3"
+        "id": "c3a76037-815d-4d9c-921d-b2d74c55fd87"
       },
       {
         "parameters": {
@@ -944,7 +944,7 @@
             "name": "Fahrschule OpenAI"
           }
         },
-        "id": "d879d9cd-1317-4114-9f96-6bc182acda83"
+        "id": "7958f377-76f9-4539-870f-0bcec8b976e1"
       },
       {
         "parameters": {
@@ -964,7 +964,7 @@
             "name": "Fahrschule OpenAI"
           }
         },
-        "id": "91904595-4e92-4cad-89e8-39078cd37b4b"
+        "id": "f5091c88-87c3-4aed-829e-aa8fe1971140"
       },
       {
         "parameters": {
@@ -1001,7 +1001,7 @@
           500
         ],
         "name": "Intent Classifier",
-        "id": "e65d8048-c536-40ad-bc05-29b31358ff1b"
+        "id": "b20f12f1-45d3-4056-ba51-58b41fc581c5"
       },
       {
         "parameters": {
@@ -1016,7 +1016,7 @@
           300
         ],
         "name": "Session Memory",
-        "id": "7dde4312-ab44-4c67-a89b-0abbfebe31ae"
+        "id": "9a5eda60-e97a-43ca-b8b1-98cb2ed11dc9"
       },
       {
         "parameters": {
@@ -1030,7 +1030,7 @@
           500
         ],
         "name": "Session Router",
-        "id": "d16b6bdf-910b-44c0-91da-9368e4276b51"
+        "id": "55348ef8-6934-499c-947f-23972ad02a83"
       },
       {
         "parameters": {
@@ -1063,7 +1063,7 @@
           500
         ],
         "name": "Route Check",
-        "id": "7f6b60f6-9a9f-4dd0-a06e-fd1fbec9695f"
+        "id": "6ab2beb3-8f2a-47b8-abc8-11d1d7f6913f"
       },
       {
         "parameters": {
@@ -1092,7 +1092,7 @@
             "name": "Fahrschule Qdrant"
           }
         },
-        "id": "6fee9f0f-29ed-4354-8f97-99a853cab98d"
+        "id": "34392136-52b6-4924-9909-37e5feb5c932"
       },
       {
         "parameters": {
@@ -1100,7 +1100,7 @@
           "text": "={{ $json.chatInput }}",
           "hasOutputParser": false,
           "options": {
-            "systemMessage": "You are the Pricing specialist for a German driving school. You have a tool that searches the official, verified price sheets. Some license classes have only one priced variant (for example Mofa, AM, A1, A2, L, T, or a variant the customer already named exactly, like BE or B197). Others have several differently priced variants, most notably Class B, which has about 18, so you must NEVER guess or average a price across variants.\n\nFollow this exact process on every pricing question:\n1. First decide whether the class actually needs disambiguation. If the customer named a class that only has one variant, or already named a specific variant exactly, skip straight to step 2, do not invent clarifying questions that do not apply to that class.\n2. If, and only if, the class genuinely has multiple priced variants and it is not yet clear which one, ask ONE short clarifying question at a time, in this order, skipping any step already answered by the customer:\n   a. Is this a new license, or a special case (converting a foreign license, re-issuance after withdrawal, switching driving schools, or removing an automatic-only restriction)?\n   b. If new: do they want the class alone, or combined with another class (for example a trailer, another vehicle class, or a tractor)?\n   c. If the class alone (for Class B specifically): manual or automatic transmission? (Automatic keeps manual entitlement too, this is the B197 variant, and fully answers this question, no course-type question needed.)\n   d. If manual: standard course, intensive course, or with simulator?\n3. Once exactly ONE specific variant is clear (whether immediately, from step 1, or after disambiguating in step 2), use the search tool to retrieve its real price and state the exact total and the effective date, and mention the official price sheet is available as a download.\n4. Never state a price for a class that still has multiple possible variants. Never invent, estimate, round, or calculate a discount. If the tool does not return a clear answer, say you are not certain and offer to connect the customer with the team.\n5. Reply in the same language the customer is using (German or English), and remember answers the customer already gave earlier in this conversation, do not ask the same question twice.\n6. You may be invoked directly for a message that is not actually about pricing (this can happen when the routing defaults to you mid-conversation). If the customer's message is clearly unrelated to any driving license topic at all (for example a completely different subject), say briefly that you handle pricing questions and ask them to restate what they need. A question naming a license class or course is on-topic even if you are not yet sure exactly what it needs, in that case follow steps 1 to 3 instead of treating it as off-topic.",
+            "systemMessage": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou are the Pricing specialist for a German driving school. You have a tool that searches the official, verified price sheets. Some license classes have only one priced variant (for example Mofa, AM, A1, A2, L, T, or a variant the customer already named exactly, like BE or B197). Others have several differently priced variants, most notably Class B, which has about 18, so you must NEVER guess or average a price across variants.\n\nFollow this exact process on every pricing question:\n1. First decide whether the class actually needs disambiguation. If the customer named a class that only has one variant, or already named a specific variant exactly, skip straight to step 2, do not invent clarifying questions that do not apply to that class.\n2. If, and only if, the class genuinely has multiple priced variants and it is not yet clear which one, ask ONE short clarifying question at a time, in this order, skipping any step already answered by the customer:\n   a. Is this a new license, or a special case (converting a foreign license, re-issuance after withdrawal, switching driving schools, or removing an automatic-only restriction)?\n   b. If new: do they want the class alone, or combined with another class (for example a trailer, another vehicle class, or a tractor)?\n   c. If the class alone (for Class B specifically): manual or automatic transmission? (Automatic keeps manual entitlement too, this is the B197 variant, and fully answers this question, no course-type question needed.)\n   d. If manual: standard course, intensive course, or with simulator?\n3. Once exactly ONE specific variant is clear (whether immediately, from step 1, or after disambiguating in step 2), use the search tool to retrieve its real price and state the exact total and the effective date, and mention the official price sheet is available as a download.\n4. Never state a price for a class that still has multiple possible variants. Never invent, estimate, round, or calculate a discount. If the tool does not return a clear answer, say you are not certain and offer to connect the customer with the team.\n5. Remember answers the customer already gave earlier in this conversation, do not ask the same question twice.\n6. You may be invoked directly for a message that is not actually about pricing (this can happen when the routing defaults to you mid-conversation). If the customer's message is clearly unrelated to any driving license topic at all (for example a completely different subject), say briefly that you handle pricing questions and ask them to restate what they need. A question naming a license class or course is on-topic even if you are not yet sure exactly what it needs, in that case follow steps 1 to 3 instead of treating it as off-topic.",
             "returnIntermediateSteps": true
           }
         },
@@ -1111,12 +1111,12 @@
           100
         ],
         "name": "Pricing Agent",
-        "id": "f0bf3c42-4904-4182-a4a2-aad45fac3cb3"
+        "id": "f7127672-8b83-471c-9fcb-6a79d2ef9625"
       },
       {
         "parameters": {
           "mode": "runOnceForAllItems",
-          "jsCode": "const store = $getWorkflowStaticData('global');\nif (!store.pricingSessions) store.pricingSessions = {};\nif (!store.lastDocument) store.lastDocument = {};\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst answer = $json.output || '';\n\n// Extract the source PDF filename from the actual retrieved tool content\n// (returnIntermediateSteps=true on the Agent node), not from the model's own\n// prose, so this does not depend on the LLM remembering to cite it correctly\n// every time. The pricing chunk text always contains this exact line (see\n// scripts/01_prepare_pricing_chunks.py), so a match here is deterministic.\nconst filenameRe = /Quelldokument \\(offizielles Preisblatt\\):\\s*([^\\n]+?\\.pdf)/i;\nlet pdfFile = null;\nconst steps = $json.intermediateSteps;\nif (Array.isArray(steps)) {\n  for (const step of steps) {\n    const observation = (step && (step.observation || step.output)) || '';\n    const text = typeof observation === 'string' ? observation : JSON.stringify(observation);\n    const m = text.match(filenameRe);\n    if (m) pdfFile = m[1].trim();  // keep the last (most recent) match if several\n  }\n}\n\n// A final priced answer states a concrete euro total; a clarifying question does not.\nconst looksResolved = /\\d[\\d.]*,\\d{2}\\s*(€|EUR)/.test(answer);\nstore.pricingSessions[sessionId] = !looksResolved;\nstore.lastDocument[sessionId] = looksResolved ? pdfFile : null;\n\nreturn $input.all();"
+          "jsCode": "const store = $getWorkflowStaticData('global');\nif (!store.pricingSessions) store.pricingSessions = {};\nif (!store.lastDocument) store.lastDocument = {};\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst answer = $json.output || '';\n\n// Extract the source PDF filename from the actual retrieved tool content\n// (returnIntermediateSteps=true on the Agent node), not from the model's own\n// prose, so this does not depend on the LLM remembering to cite it correctly\n// every time. The pricing chunk text always contains this exact line (see\n// scripts/01_prepare_pricing_chunks.py), so a match here is deterministic.\nconst filenameRe = /Quelldokument \\(offizielles Preisblatt\\):\\s*([^\\n]+?\\.pdf)/i;\nlet pdfFile = null;\nconst steps = $json.intermediateSteps;\nif (Array.isArray(steps)) {\n  for (const step of steps) {\n    const observation = (step && (step.observation || step.output)) || '';\n    const text = typeof observation === 'string' ? observation : JSON.stringify(observation);\n    const m = text.match(filenameRe);\n    if (m) pdfFile = m[1].trim();  // keep the last (most recent) match if several\n  }\n}\n\n// A final priced answer states a concrete euro total; a clarifying question does not.\n// Match both German (\"236,96 EUR\" / \"236,96 €\") and English (\"€236.96\" / \"EUR 236.96\")\n// formatting, since the Synthesizer localises the number style to the reply language.\nconst looksResolved = /(?:\\d[\\d.,]*[.,]\\d{2}\\s*(?:€|EUR)|(?:€|EUR)\\s*\\d[\\d.,]*[.,]\\d{2})/.test(answer);\nstore.pricingSessions[sessionId] = !looksResolved;\nstore.lastDocument[sessionId] = looksResolved ? pdfFile : null;\n\nreturn $input.all();"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -1125,7 +1125,7 @@
           100
         ],
         "name": "Update Pricing State",
-        "id": "41b010b4-4b73-4e46-ad60-d67b0b074ead"
+        "id": "67d4d988-2b65-41a2-ba5e-6570ac737170"
       },
       {
         "parameters": {
@@ -1149,7 +1149,7 @@
           100
         ],
         "name": "Pricing Answer (normalized)",
-        "id": "80bc47b6-9aa1-4a1d-809c-e8ed1bc2d2b4"
+        "id": "f2f7b1b8-db97-4794-b22a-5306925ddaa9"
       },
       {
         "parameters": {
@@ -1176,7 +1176,7 @@
             "name": "Fahrschule Qdrant"
           }
         },
-        "id": "634e35f3-394f-4d55-85e6-3a08d0675e0c"
+        "id": "41b78705-5a30-49e5-bf51-c2be2d5e7604"
       },
       {
         "parameters": {},
@@ -1187,14 +1187,14 @@
           320
         ],
         "name": "Timings Retriever",
-        "id": "943ef81a-3b5e-4fcd-aa02-a29d83631180"
+        "id": "8abc432f-dff8-4d03-8cde-76dede8cea1a"
       },
       {
         "parameters": {
           "promptType": "define",
           "text": "={{ $json.chatInput }}",
           "options": {
-            "systemPromptTemplate": "You answer LOCATION AND OPENING HOURS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+            "systemPromptTemplate": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou answer LOCATION AND OPENING HOURS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
           }
         },
         "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
@@ -1204,7 +1204,7 @@
           320
         ],
         "name": "Timings RAG Chain",
-        "id": "2fcf574e-6d46-4de2-8c9d-5268a8269a3f"
+        "id": "161ad2e2-a6ce-41e9-a456-d8f9df5dbc3f"
       },
       {
         "parameters": {
@@ -1231,7 +1231,7 @@
             "name": "Fahrschule Qdrant"
           }
         },
-        "id": "c449893c-ef54-4b7a-90a2-98a951d576bf"
+        "id": "9e77d166-ae27-4acf-97ee-dac14a9351e3"
       },
       {
         "parameters": {},
@@ -1242,14 +1242,14 @@
           540
         ],
         "name": "Documents Retriever",
-        "id": "84dda385-16fd-43ad-9ec4-5e6ec1780bee"
+        "id": "b4726765-0911-4d74-873b-e3fe3147f63f"
       },
       {
         "parameters": {
           "promptType": "define",
           "text": "={{ $json.chatInput }}",
           "options": {
-            "systemPromptTemplate": "You answer REGISTRATION AND REQUIRED-DOCUMENTS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+            "systemPromptTemplate": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou answer REGISTRATION AND REQUIRED-DOCUMENTS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
           }
         },
         "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
@@ -1259,7 +1259,7 @@
           540
         ],
         "name": "Documents RAG Chain",
-        "id": "d1575b76-3f52-45fc-8313-89c24cafa9aa"
+        "id": "b4dda79a-03d6-4595-9c82-d46342ab73b5"
       },
       {
         "parameters": {
@@ -1286,7 +1286,7 @@
             "name": "Fahrschule Qdrant"
           }
         },
-        "id": "ebaf7899-7479-495d-9365-98fbe51d6fb5"
+        "id": "63539c89-1a2c-4cbb-9213-ebc9ebdcc8c5"
       },
       {
         "parameters": {},
@@ -1297,14 +1297,14 @@
           760
         ],
         "name": "Courses Retriever",
-        "id": "b876f714-af03-4a6d-918f-b442c75a995d"
+        "id": "e29d40b3-22f7-413e-905a-1cc62fbe5a3e"
       },
       {
         "parameters": {
           "promptType": "define",
           "text": "={{ $json.chatInput }}",
           "options": {
-            "systemPromptTemplate": "You answer COURSE AND OFFERING questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+            "systemPromptTemplate": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou answer COURSE AND OFFERING questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
           }
         },
         "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
@@ -1314,7 +1314,7 @@
           760
         ],
         "name": "Courses RAG Chain",
-        "id": "6c429264-34a3-4734-b6c4-7841846126a0"
+        "id": "53a11ca3-dda6-4a1e-8cec-2a916c394bf7"
       },
       {
         "parameters": {
@@ -1341,7 +1341,7 @@
             "name": "Fahrschule Qdrant"
           }
         },
-        "id": "bacb5b56-f61c-42ff-a753-e7a40e0e0e96"
+        "id": "485ec1f9-367e-473b-a42f-14ac4aca3506"
       },
       {
         "parameters": {},
@@ -1352,14 +1352,14 @@
           980
         ],
         "name": "Other Retriever",
-        "id": "070a16ca-91ef-4d44-8779-caee2d1d43a9"
+        "id": "75963ef1-3757-4ac1-9838-2bf32b423d6a"
       },
       {
         "parameters": {
           "promptType": "define",
           "text": "={{ $json.chatInput }}",
           "options": {
-            "systemPromptTemplate": "You answer general company questions using ONLY the retrieved context. If nothing relevant was retrieved, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+            "systemPromptTemplate": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou answer general company questions using ONLY the retrieved context. If nothing relevant was retrieved, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
           }
         },
         "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
@@ -1369,7 +1369,7 @@
           980
         ],
         "name": "Other RAG Chain",
-        "id": "0ceef78b-d534-4f58-9c52-c5a641f96a5f"
+        "id": "fe0aaf94-30a3-4288-94fe-ee1555bac4b6"
       },
       {
         "parameters": {
@@ -1382,7 +1382,7 @@
           500
         ],
         "name": "Merge Answers",
-        "id": "65e993d6-60b2-4710-88e4-475a7dbf2674"
+        "id": "bc46064e-e497-42fc-b367-de650f5fea49"
       },
       {
         "parameters": {
@@ -1402,12 +1402,12 @@
           500
         ],
         "name": "Aggregate Answers",
-        "id": "5d1a76ca-4532-4222-b4af-d6f7c3575cf3"
+        "id": "28407178-d4b2-472a-ae9d-124f179811e5"
       },
       {
         "parameters": {
           "promptType": "define",
-          "text": "=You are the final response formatter for a German driving school chatbot. You receive one or more draft answers from specialist agents, plus the customer's original message. Combine them into ONE clean, professional, well-formatted reply in the same language as the customer's message (German or English). Do not add, remove, or alter any number, price, date, or fact from the draft answers, only merge, reformat, and improve the phrasing. If a draft says it is not certain, keep that uncertainty and the offer to connect with the team in the final reply.\n\nCustomer's message: {{ $('Chat Trigger').item.json.chatInput }}\n\nDraft answers:\n{{ ($json.response || []).join('\\n\\n') }}"
+          "text": "=IMPORTANT LANGUAGE RULE: Reply strictly in {{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, regardless of the language of the customer's message. Do not switch languages even if the customer types in the other language.\n\nYou are the final response formatter for a German driving school chatbot. You receive one or more draft answers from specialist agents, plus the customer's original message. Combine them into ONE clean, professional, well-formatted reply. Do not add, remove, or alter any number, price, date, or fact from the draft answers, only merge, reformat, translate if needed to match the required response language above, and improve the phrasing. If a draft says it is not certain, keep that uncertainty and the offer to connect with the team in the final reply.\n\nCustomer's message: {{ $('Chat Trigger').item.json.chatInput }}\n\nDraft answers:\n{{ ($json.response || []).join('\\n\\n') }}"
         },
         "type": "@n8n/n8n-nodes-langchain.chainLlm",
         "typeVersion": 1.9,
@@ -1416,7 +1416,7 @@
           500
         ],
         "name": "Synthesizer",
-        "id": "189d96d3-2d11-400e-b54f-e7c6c53716b6"
+        "id": "d25ba15b-fa6a-43dd-97f6-c39fbc018d1e"
       },
       {
         "parameters": {
@@ -1430,7 +1430,7 @@
           500
         ],
         "name": "Attach Document Link",
-        "id": "b54b7551-6c33-4942-99a5-e36d7c9a0fe6"
+        "id": "c45351c9-674e-4616-86db-c5272957ec4e"
       }
     ],
     "connections": {
@@ -1812,34 +1812,34 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-07-16T18:38:57.594Z",
-        "id": 43,
+        "createdAt": "2026-07-16T19:25:02.242Z",
+        "id": 53,
         "workflowId": "iPLMB3TIMwngEDDU",
-        "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+        "versionId": "f4139b82-ad83-458d-a85d-7931c4668ade",
         "event": "activated",
         "userId": "3068e795-a005-4af7-b4e6-7e9191129b19"
       },
       {
-        "createdAt": "2026-07-16T18:38:57.638Z",
-        "id": 45,
+        "createdAt": "2026-07-16T19:25:02.332Z",
+        "id": 55,
         "workflowId": "iPLMB3TIMwngEDDU",
-        "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+        "versionId": "f4139b82-ad83-458d-a85d-7931c4668ade",
         "event": "activated",
         "userId": "3068e795-a005-4af7-b4e6-7e9191129b19"
       },
       {
-        "createdAt": "2026-07-16T18:38:57.578Z",
-        "id": 42,
+        "createdAt": "2026-07-16T19:25:02.211Z",
+        "id": 52,
         "workflowId": "iPLMB3TIMwngEDDU",
-        "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+        "versionId": "f4139b82-ad83-458d-a85d-7931c4668ade",
         "event": "deactivated",
         "userId": "3068e795-a005-4af7-b4e6-7e9191129b19"
       },
       {
-        "createdAt": "2026-07-16T18:38:57.622Z",
-        "id": 44,
+        "createdAt": "2026-07-16T19:25:02.302Z",
+        "id": 54,
         "workflowId": "iPLMB3TIMwngEDDU",
-        "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+        "versionId": "f4139b82-ad83-458d-a85d-7931c4668ade",
         "event": "deactivated",
         "userId": "3068e795-a005-4af7-b4e6-7e9191129b19"
       }

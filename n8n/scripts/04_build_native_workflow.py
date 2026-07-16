@@ -122,8 +122,7 @@ PRICING_AGENT_PROMPT = (
     "variants. Never invent, estimate, round, or calculate a discount. If the "
     "tool does not return a clear answer, say you are not certain and offer to "
     "connect the customer with the team.\n"
-    "5. Reply in the same language the customer is using (German or English), "
-    "and remember answers the customer already gave earlier in this "
+    "5. Remember answers the customer already gave earlier in this "
     "conversation, do not ask the same question twice.\n"
     "6. You may be invoked directly for a message that is not actually about "
     "pricing (this can happen when the routing defaults to you mid-conversation). "
@@ -143,15 +142,30 @@ FALLBACK_PROMPT = (
     "connect the customer with the team."
 )
 
+# The customer chooses their preferred response language via the UI toggle
+# (DE / EN, sent on every request as $json.lang). That choice is authoritative:
+# a customer viewing the German UI wants German answers even if they happen to
+# type one English sentence, and vice versa. So the sub-agents and synthesizer
+# resolve this at n8n-expression time from the Chat Trigger's payload rather
+# than trying to infer it from the message text. Defaults to German if the
+# field is missing, matching the site's default UI language.
+LANG_RULE = (
+    "IMPORTANT LANGUAGE RULE: Reply strictly in "
+    "{{ $('Chat Trigger').item.json.lang === 'en' ? 'English' : 'German' }}, "
+    "regardless of the language of the customer's message. Do not switch "
+    "languages even if the customer types in the other language.\n\n"
+)
+
 SYNTHESIZER_PROMPT = (
-    "=You are the final response formatter for a German driving school chatbot. "
+    "=" + LANG_RULE +
+    "You are the final response formatter for a German driving school chatbot. "
     "You receive one or more draft answers from specialist agents, plus the "
     "customer's original message. Combine them into ONE clean, professional, "
-    "well-formatted reply in the same language as the customer's message (German "
-    "or English). Do not add, remove, or alter any number, price, date, or fact "
-    "from the draft answers, only merge, reformat, and improve the phrasing. If a "
-    "draft says it is not certain, keep that uncertainty and the offer to "
-    "connect with the team in the final reply.\n\n"
+    "well-formatted reply. Do not add, remove, or alter any number, price, "
+    "date, or fact from the draft answers, only merge, reformat, translate "
+    "if needed to match the required response language above, and improve "
+    "the phrasing. If a draft says it is not certain, keep that uncertainty "
+    "and the offer to connect with the team in the final reply.\n\n"
     "Customer's message: {{ $('Chat Trigger').item.json.chatInput }}\n\n"
     "Draft answers:\n{{ ($json.response || []).join('\\n\\n') }}"
 )
@@ -209,7 +223,12 @@ def rag_branch_nodes(label: str, collection: str, system_prompt: str, x: float, 
                 "promptType": "define",
                 "text": "={{ $json.chatInput }}",
                 "options": {
-                    "systemPromptTemplate": system_prompt + "\n----------------\nContext: {context}",
+                    # "=" prefix activates n8n expression evaluation so LANG_RULE's
+                    # {{ ... }} interpolation runs against the current item. The
+                    # LangChain-native {context} placeholder is single-brace and is
+                    # untouched by n8n's expression parser, then substituted by the
+                    # Retrieval QA chain itself at model-call time.
+                    "systemPromptTemplate": "=" + LANG_RULE + system_prompt + "\n----------------\nContext: {context}",
                 },
             },
             "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa", "typeVersion": 1.7,
@@ -244,7 +263,9 @@ if (Array.isArray(steps)) {
 }
 
 // A final priced answer states a concrete euro total; a clarifying question does not.
-const looksResolved = /\d[\d.]*,\d{2}\s*(€|EUR)/.test(answer);
+// Match both German ("236,96 EUR" / "236,96 €") and English ("€236.96" / "EUR 236.96")
+// formatting, since the Synthesizer localises the number style to the reply language.
+const looksResolved = /(?:\d[\d.,]*[.,]\d{2}\s*(?:€|EUR)|(?:€|EUR)\s*\d[\d.,]*[.,]\d{2})/.test(answer);
 store.pricingSessions[sessionId] = !looksResolved;
 store.lastDocument[sessionId] = looksResolved ? pdfFile : null;
 
@@ -311,7 +332,7 @@ def pricing_agent_nodes(x: float, y: float, qdrant_cred: str) -> tuple[list[dict
                 "text": "={{ $json.chatInput }}",
                 "hasOutputParser": False,
                 "options": {
-                    "systemMessage": PRICING_AGENT_PROMPT,
+                    "systemMessage": "=" + LANG_RULE + PRICING_AGENT_PROMPT,
                     "returnIntermediateSteps": True,
                 },
             },
