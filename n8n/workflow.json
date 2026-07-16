@@ -1,5 +1,7 @@
 {
   "name": "Fahrschule Native Multi-Agent Orchestration",
+  "description": null,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -15,7 +17,7 @@
       ],
       "name": "Chat Trigger",
       "webhookId": "fahrschule-native-chat",
-      "id": "aaff54a0-2d73-4fc7-863b-dd43824bcd93"
+      "id": "b6fbf633-c5be-46d6-98b7-b012af7189d3"
     },
     {
       "parameters": {
@@ -36,11 +38,10 @@
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "iOFiRdyfBWAfyBLQ",
           "name": "Fahrschule OpenAI"
         }
       },
-      "id": "2410f41c-4d92-40c5-bdcb-005bb22ef0b3"
+      "id": "d879d9cd-1317-4114-9f96-6bc182acda83"
     },
     {
       "parameters": {
@@ -56,11 +57,10 @@
       "name": "OpenAI Embeddings",
       "credentials": {
         "openAiApi": {
-          "id": "iOFiRdyfBWAfyBLQ",
           "name": "Fahrschule OpenAI"
         }
       },
-      "id": "58764999-f3e4-4965-ada7-4547e77f87d8"
+      "id": "91904595-4e92-4cad-89e8-39078cd37b4b"
     },
     {
       "parameters": {
@@ -97,7 +97,7 @@
         500
       ],
       "name": "Intent Classifier",
-      "id": "116baede-74e1-43a4-ad1a-ea07f4f1da08"
+      "id": "e65d8048-c536-40ad-bc05-29b31358ff1b"
     },
     {
       "parameters": {
@@ -112,7 +112,7 @@
         300
       ],
       "name": "Session Memory",
-      "id": "56311812-7777-4363-8336-9fb3db42ef50"
+      "id": "7dde4312-ab44-4c67-a89b-0abbfebe31ae"
     },
     {
       "parameters": {
@@ -126,7 +126,7 @@
         500
       ],
       "name": "Session Router",
-      "id": "73a0f2df-6cd8-4d8a-8bb7-9e2e389ae894"
+      "id": "d16b6bdf-910b-44c0-91da-9368e4276b51"
     },
     {
       "parameters": {
@@ -159,7 +159,7 @@
         500
       ],
       "name": "Route Check",
-      "id": "ff90f191-842b-4ec7-b110-ec50808118cd"
+      "id": "7f6b60f6-9a9f-4dd0-a06e-fd1fbec9695f"
     },
     {
       "parameters": {
@@ -184,11 +184,10 @@
       "name": "Pricing Vector Store",
       "credentials": {
         "qdrantApi": {
-          "id": "0yyoWZb9YJlIqPnW",
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "dd8a219f-e6ee-4c55-8015-06794ec7ae3e"
+      "id": "6fee9f0f-29ed-4354-8f97-99a853cab98d"
     },
     {
       "parameters": {
@@ -196,7 +195,8 @@
         "text": "={{ $json.chatInput }}",
         "hasOutputParser": false,
         "options": {
-          "systemMessage": "You are the Pricing specialist for a German driving school. You have a tool that searches the official, verified price sheets. Many license classes have several differently priced variants, most notably Class B, which has about 18 variants, so you must NEVER guess or average a price across variants.\n\nFollow this exact process on every pricing question:\n1. If the class or situation is not yet fully clear, ask ONE short clarifying question at a time, in this order, skipping any step already answered by the customer:\n   a. Is this a new license, or a special case (converting a foreign license, re-issuance after withdrawal, switching driving schools, or removing an automatic-only restriction)?\n   b. If new: do they want the class alone, or combined with another class (for example a trailer, another vehicle class, or a tractor)?\n   c. If the class alone (for Class B specifically): manual or automatic transmission? (Automatic keeps manual entitlement too, this is the B197 variant, and fully answers this question, no course-type question needed.)\n   d. If manual: standard course, intensive course, or with simulator?\n2. Only once exactly ONE specific variant is unambiguous, use the search tool to retrieve its real price and state the exact total, the effective date, and mention the official price sheet is available as a download.\n3. Never state a price for a class that still has multiple possible variants. Never invent, estimate, round, or calculate a discount. If the tool does not return a clear answer, say you are not certain and offer to connect the customer with the team.\n4. Reply in the same language the customer is using (German or English), and remember answers the customer already gave earlier in this conversation, do not ask the same question twice.\n5. You may be invoked directly for a message that is not actually about pricing (this can happen when the routing defaults to you mid-conversation). If the customer's message is clearly unrelated to a driving license price (for example a new, different topic), say briefly that you handle pricing questions and ask them to restate what they need."
+          "systemMessage": "You are the Pricing specialist for a German driving school. You have a tool that searches the official, verified price sheets. Some license classes have only one priced variant (for example Mofa, AM, A1, A2, L, T, or a variant the customer already named exactly, like BE or B197). Others have several differently priced variants, most notably Class B, which has about 18, so you must NEVER guess or average a price across variants.\n\nFollow this exact process on every pricing question:\n1. First decide whether the class actually needs disambiguation. If the customer named a class that only has one variant, or already named a specific variant exactly, skip straight to step 2, do not invent clarifying questions that do not apply to that class.\n2. If, and only if, the class genuinely has multiple priced variants and it is not yet clear which one, ask ONE short clarifying question at a time, in this order, skipping any step already answered by the customer:\n   a. Is this a new license, or a special case (converting a foreign license, re-issuance after withdrawal, switching driving schools, or removing an automatic-only restriction)?\n   b. If new: do they want the class alone, or combined with another class (for example a trailer, another vehicle class, or a tractor)?\n   c. If the class alone (for Class B specifically): manual or automatic transmission? (Automatic keeps manual entitlement too, this is the B197 variant, and fully answers this question, no course-type question needed.)\n   d. If manual: standard course, intensive course, or with simulator?\n3. Once exactly ONE specific variant is clear (whether immediately, from step 1, or after disambiguating in step 2), use the search tool to retrieve its real price and state the exact total and the effective date, and mention the official price sheet is available as a download.\n4. Never state a price for a class that still has multiple possible variants. Never invent, estimate, round, or calculate a discount. If the tool does not return a clear answer, say you are not certain and offer to connect the customer with the team.\n5. Reply in the same language the customer is using (German or English), and remember answers the customer already gave earlier in this conversation, do not ask the same question twice.\n6. You may be invoked directly for a message that is not actually about pricing (this can happen when the routing defaults to you mid-conversation). If the customer's message is clearly unrelated to any driving license topic at all (for example a completely different subject), say briefly that you handle pricing questions and ask them to restate what they need. A question naming a license class or course is on-topic even if you are not yet sure exactly what it needs, in that case follow steps 1 to 3 instead of treating it as off-topic.",
+          "returnIntermediateSteps": true
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -206,12 +206,12 @@
         100
       ],
       "name": "Pricing Agent",
-      "id": "d4d32623-d6a6-457d-a6a1-7ae2951ca5ca"
+      "id": "f0bf3c42-4904-4182-a4a2-aad45fac3cb3"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const store = $getWorkflowStaticData('global');\nif (!store.pricingSessions) store.pricingSessions = {};\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst answer = $json.output || '';\n// A final priced answer states a concrete euro total; a clarifying question does not.\nconst looksResolved = /\\d[\\d.]*,\\d{2}\\s*(€|EUR)/.test(answer);\nstore.pricingSessions[sessionId] = !looksResolved;\nreturn $input.all();"
+        "jsCode": "const store = $getWorkflowStaticData('global');\nif (!store.pricingSessions) store.pricingSessions = {};\nif (!store.lastDocument) store.lastDocument = {};\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst answer = $json.output || '';\n\n// Extract the source PDF filename from the actual retrieved tool content\n// (returnIntermediateSteps=true on the Agent node), not from the model's own\n// prose, so this does not depend on the LLM remembering to cite it correctly\n// every time. The pricing chunk text always contains this exact line (see\n// scripts/01_prepare_pricing_chunks.py), so a match here is deterministic.\nconst filenameRe = /Quelldokument \\(offizielles Preisblatt\\):\\s*([^\\n]+?\\.pdf)/i;\nlet pdfFile = null;\nconst steps = $json.intermediateSteps;\nif (Array.isArray(steps)) {\n  for (const step of steps) {\n    const observation = (step && (step.observation || step.output)) || '';\n    const text = typeof observation === 'string' ? observation : JSON.stringify(observation);\n    const m = text.match(filenameRe);\n    if (m) pdfFile = m[1].trim();  // keep the last (most recent) match if several\n  }\n}\n\n// A final priced answer states a concrete euro total; a clarifying question does not.\nconst looksResolved = /\\d[\\d.]*,\\d{2}\\s*(€|EUR)/.test(answer);\nstore.pricingSessions[sessionId] = !looksResolved;\nstore.lastDocument[sessionId] = looksResolved ? pdfFile : null;\n\nreturn $input.all();"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -220,7 +220,7 @@
         100
       ],
       "name": "Update Pricing State",
-      "id": "cb0a852d-02a4-4309-833f-130b7263d124"
+      "id": "41b010b4-4b73-4e46-ad60-d67b0b074ead"
     },
     {
       "parameters": {
@@ -244,7 +244,7 @@
         100
       ],
       "name": "Pricing Answer (normalized)",
-      "id": "4eda5515-b239-43d8-9c24-cb3ea03dd3a3"
+      "id": "80bc47b6-9aa1-4a1d-809c-e8ed1bc2d2b4"
     },
     {
       "parameters": {
@@ -267,11 +267,10 @@
       "name": "Timings Vector Store",
       "credentials": {
         "qdrantApi": {
-          "id": "0yyoWZb9YJlIqPnW",
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "58e9f100-1cf4-4c14-b45a-34f2ec1bd241"
+      "id": "634e35f3-394f-4d55-85e6-3a08d0675e0c"
     },
     {
       "parameters": {},
@@ -282,7 +281,7 @@
         320
       ],
       "name": "Timings Retriever",
-      "id": "d2e70a0a-8ade-4ec7-a436-575707d175cc"
+      "id": "943ef81a-3b5e-4fcd-aa02-a29d83631180"
     },
     {
       "parameters": {
@@ -299,7 +298,7 @@
         320
       ],
       "name": "Timings RAG Chain",
-      "id": "466e1962-635f-43d6-936f-b4ce4493e872"
+      "id": "2fcf574e-6d46-4de2-8c9d-5268a8269a3f"
     },
     {
       "parameters": {
@@ -322,11 +321,10 @@
       "name": "Documents Vector Store",
       "credentials": {
         "qdrantApi": {
-          "id": "0yyoWZb9YJlIqPnW",
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "717da857-338b-4529-9ac6-c40d819321d8"
+      "id": "c449893c-ef54-4b7a-90a2-98a951d576bf"
     },
     {
       "parameters": {},
@@ -337,7 +335,7 @@
         540
       ],
       "name": "Documents Retriever",
-      "id": "0952dc5d-72a8-47ea-92e2-86b8beff52b6"
+      "id": "84dda385-16fd-43ad-9ec4-5e6ec1780bee"
     },
     {
       "parameters": {
@@ -354,7 +352,7 @@
         540
       ],
       "name": "Documents RAG Chain",
-      "id": "410e2f71-c48c-4479-a97f-cd37b9802297"
+      "id": "d1575b76-3f52-45fc-8313-89c24cafa9aa"
     },
     {
       "parameters": {
@@ -377,11 +375,10 @@
       "name": "Courses Vector Store",
       "credentials": {
         "qdrantApi": {
-          "id": "0yyoWZb9YJlIqPnW",
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "fea69ba4-58ae-4f68-8715-e910304f268f"
+      "id": "ebaf7899-7479-495d-9365-98fbe51d6fb5"
     },
     {
       "parameters": {},
@@ -392,7 +389,7 @@
         760
       ],
       "name": "Courses Retriever",
-      "id": "a4d11ef2-38ab-4a32-bd2f-d095e2b0674e"
+      "id": "b876f714-af03-4a6d-918f-b442c75a995d"
     },
     {
       "parameters": {
@@ -409,7 +406,7 @@
         760
       ],
       "name": "Courses RAG Chain",
-      "id": "fb608067-787d-4358-85fc-0cead3750f90"
+      "id": "6c429264-34a3-4734-b6c4-7841846126a0"
     },
     {
       "parameters": {
@@ -432,11 +429,10 @@
       "name": "Other Vector Store",
       "credentials": {
         "qdrantApi": {
-          "id": "0yyoWZb9YJlIqPnW",
           "name": "Fahrschule Qdrant"
         }
       },
-      "id": "13428f6f-b172-4ea6-9ee0-72f4dd012394"
+      "id": "bacb5b56-f61c-42ff-a753-e7a40e0e0e96"
     },
     {
       "parameters": {},
@@ -447,7 +443,7 @@
         980
       ],
       "name": "Other Retriever",
-      "id": "fb85ecde-7169-4b7d-bdac-fd1a25259ae2"
+      "id": "070a16ca-91ef-4d44-8779-caee2d1d43a9"
     },
     {
       "parameters": {
@@ -464,7 +460,7 @@
         980
       ],
       "name": "Other RAG Chain",
-      "id": "8a07306c-d035-40f4-a35d-2da7590ab2e5"
+      "id": "0ceef78b-d534-4f58-9c52-c5a641f96a5f"
     },
     {
       "parameters": {
@@ -477,7 +473,7 @@
         500
       ],
       "name": "Merge Answers",
-      "id": "c8ebaebd-f915-4880-9716-e6be6bc6069e"
+      "id": "65e993d6-60b2-4710-88e4-475a7dbf2674"
     },
     {
       "parameters": {
@@ -497,7 +493,7 @@
         500
       ],
       "name": "Aggregate Answers",
-      "id": "bce88663-94b0-40d8-9a29-95f482a9a582"
+      "id": "5d1a76ca-4532-4222-b4af-d6f7c3575cf3"
     },
     {
       "parameters": {
@@ -511,7 +507,21 @@
         500
       ],
       "name": "Synthesizer",
-      "id": "27447314-54ef-4dee-ab01-220175b9c938"
+      "id": "189d96d3-2d11-400e-b54f-e7c6c53716b6"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const store = $getWorkflowStaticData('global');\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst docs = store.lastDocument || {};\nconst documentFile = docs[sessionId] || null;\n// consume once so it doesn't reattach to a later, unrelated reply in the same session\nif (sessionId in docs) delete docs[sessionId];\n\nconst item = $input.all()[0];\nreturn [{ json: { ...item.json, documentFile } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        500
+      ],
+      "name": "Attach Document Link",
+      "id": "b54b7551-6c33-4942-99a5-e36d7c9a0fe6"
     }
   ],
   "connections": {
@@ -874,11 +884,965 @@
           }
         ]
       ]
+    },
+    "Synthesizer": {
+      "main": [
+        [
+          {
+            "node": "Attach Document Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": {
-    "executionOrder": "v1",
-    "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
+  "activeVersionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+  "versionCounter": 255,
+  "activeVersion": {
+    "updatedAt": "2026-07-16T18:38:57.546Z",
+    "createdAt": "2026-07-16T18:38:57.546Z",
+    "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+    "workflowId": "iPLMB3TIMwngEDDU",
+    "nodes": [
+      {
+        "parameters": {
+          "public": true,
+          "mode": "webhook",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+        "typeVersion": 1.4,
+        "position": [
+          -2000,
+          500
+        ],
+        "name": "Chat Trigger",
+        "webhookId": "fahrschule-native-chat",
+        "id": "b6fbf633-c5be-46d6-98b7-b012af7189d3"
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "id",
+            "value": "gpt-4o-mini"
+          },
+          "responsesApiEnabled": false,
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          -1900,
+          900
+        ],
+        "name": "OpenAI Chat Model",
+        "credentials": {
+          "openAiApi": {
+            "id": "iOFiRdyfBWAfyBLQ",
+            "name": "Fahrschule OpenAI"
+          }
+        },
+        "id": "d879d9cd-1317-4114-9f96-6bc182acda83"
+      },
+      {
+        "parameters": {
+          "model": "text-embedding-3-small",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+        "typeVersion": 1.2,
+        "position": [
+          -1900,
+          1100
+        ],
+        "name": "OpenAI Embeddings",
+        "credentials": {
+          "openAiApi": {
+            "id": "iOFiRdyfBWAfyBLQ",
+            "name": "Fahrschule OpenAI"
+          }
+        },
+        "id": "91904595-4e92-4cad-89e8-39078cd37b4b"
+      },
+      {
+        "parameters": {
+          "inputText": "={{ $json.chatInput }}",
+          "categories": {
+            "categories": [
+              {
+                "category": "Pricing",
+                "description": "Questions about course prices, costs, fees, discounts, or payment. Also includes short follow-up answers that continue an ongoing pricing conversation, such as: new license vs special case (conversion, re-issuance, school change); car only vs combined with another class; manual vs automatic transmission; standard vs intensive vs simulator course. Treat these short disambiguation replies as Pricing even without the word 'price' in them."
+              },
+              {
+                "category": "Timings",
+                "description": "Questions about addresses, opening hours, contact info, or locations."
+              },
+              {
+                "category": "Documents",
+                "description": "Questions about how to register/enroll, required documents, exam registration, or document validity."
+              },
+              {
+                "category": "Courses",
+                "description": "Questions about which courses or license classes are offered, course content, exam procedure, or simulator/VR training."
+              }
+            ]
+          },
+          "options": {
+            "multiClass": true,
+            "fallback": "other"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.textClassifier",
+        "typeVersion": 1.1,
+        "position": [
+          -1700,
+          500
+        ],
+        "name": "Intent Classifier",
+        "id": "e65d8048-c536-40ad-bc05-29b31358ff1b"
+      },
+      {
+        "parameters": {
+          "sessionIdType": "customKey",
+          "sessionKey": "={{ $('Chat Trigger').item.json.sessionId }}",
+          "contextWindowLength": 12
+        },
+        "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+        "typeVersion": 1.3,
+        "position": [
+          -1500,
+          300
+        ],
+        "name": "Session Memory",
+        "id": "7dde4312-ab44-4c67-a89b-0abbfebe31ae"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const store = $getWorkflowStaticData('global');\nconst sessions = store.pricingSessions || {};\nconst sessionId = $json.sessionId;\nconst midPricing = sessions[sessionId] === true;\nreturn [{ json: { ...$json, _forcePricing: midPricing } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1900,
+          500
+        ],
+        "name": "Session Router",
+        "id": "d16b6bdf-910b-44c0-91da-9368e4276b51"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "1",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                },
+                "leftValue": "={{ $json._forcePricing }}",
+                "rightValue": ""
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          -1800,
+          500
+        ],
+        "name": "Route Check",
+        "id": "7f6b60f6-9a9f-4dd0-a06e-fd1fbec9695f"
+      },
+      {
+        "parameters": {
+          "mode": "retrieve-as-tool",
+          "toolName": "search_price_sheets",
+          "toolDescription": "Search the official, verified price sheets for German driving license courses. Input a specific class/variant description (for example 'Klasse B197' or 'Klasse BE'). Returns the exact line items, total price, and effective date for matching sheets. Only call this once the specific variant is known, not for a still-ambiguous class.",
+          "qdrantCollection": {
+            "__rl": true,
+            "mode": "id",
+            "value": "pricing"
+          },
+          "options": {
+            "contentPayloadKey": "text"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+        "typeVersion": 1.3,
+        "position": [
+          -1400,
+          100
+        ],
+        "name": "Pricing Vector Store",
+        "credentials": {
+          "qdrantApi": {
+            "id": "0yyoWZb9YJlIqPnW",
+            "name": "Fahrschule Qdrant"
+          }
+        },
+        "id": "6fee9f0f-29ed-4354-8f97-99a853cab98d"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.chatInput }}",
+          "hasOutputParser": false,
+          "options": {
+            "systemMessage": "You are the Pricing specialist for a German driving school. You have a tool that searches the official, verified price sheets. Some license classes have only one priced variant (for example Mofa, AM, A1, A2, L, T, or a variant the customer already named exactly, like BE or B197). Others have several differently priced variants, most notably Class B, which has about 18, so you must NEVER guess or average a price across variants.\n\nFollow this exact process on every pricing question:\n1. First decide whether the class actually needs disambiguation. If the customer named a class that only has one variant, or already named a specific variant exactly, skip straight to step 2, do not invent clarifying questions that do not apply to that class.\n2. If, and only if, the class genuinely has multiple priced variants and it is not yet clear which one, ask ONE short clarifying question at a time, in this order, skipping any step already answered by the customer:\n   a. Is this a new license, or a special case (converting a foreign license, re-issuance after withdrawal, switching driving schools, or removing an automatic-only restriction)?\n   b. If new: do they want the class alone, or combined with another class (for example a trailer, another vehicle class, or a tractor)?\n   c. If the class alone (for Class B specifically): manual or automatic transmission? (Automatic keeps manual entitlement too, this is the B197 variant, and fully answers this question, no course-type question needed.)\n   d. If manual: standard course, intensive course, or with simulator?\n3. Once exactly ONE specific variant is clear (whether immediately, from step 1, or after disambiguating in step 2), use the search tool to retrieve its real price and state the exact total and the effective date, and mention the official price sheet is available as a download.\n4. Never state a price for a class that still has multiple possible variants. Never invent, estimate, round, or calculate a discount. If the tool does not return a clear answer, say you are not certain and offer to connect the customer with the team.\n5. Reply in the same language the customer is using (German or English), and remember answers the customer already gave earlier in this conversation, do not ask the same question twice.\n6. You may be invoked directly for a message that is not actually about pricing (this can happen when the routing defaults to you mid-conversation). If the customer's message is clearly unrelated to any driving license topic at all (for example a completely different subject), say briefly that you handle pricing questions and ask them to restate what they need. A question naming a license class or course is on-topic even if you are not yet sure exactly what it needs, in that case follow steps 1 to 3 instead of treating it as off-topic.",
+            "returnIntermediateSteps": true
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          -1200,
+          100
+        ],
+        "name": "Pricing Agent",
+        "id": "f0bf3c42-4904-4182-a4a2-aad45fac3cb3"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const store = $getWorkflowStaticData('global');\nif (!store.pricingSessions) store.pricingSessions = {};\nif (!store.lastDocument) store.lastDocument = {};\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst answer = $json.output || '';\n\n// Extract the source PDF filename from the actual retrieved tool content\n// (returnIntermediateSteps=true on the Agent node), not from the model's own\n// prose, so this does not depend on the LLM remembering to cite it correctly\n// every time. The pricing chunk text always contains this exact line (see\n// scripts/01_prepare_pricing_chunks.py), so a match here is deterministic.\nconst filenameRe = /Quelldokument \\(offizielles Preisblatt\\):\\s*([^\\n]+?\\.pdf)/i;\nlet pdfFile = null;\nconst steps = $json.intermediateSteps;\nif (Array.isArray(steps)) {\n  for (const step of steps) {\n    const observation = (step && (step.observation || step.output)) || '';\n    const text = typeof observation === 'string' ? observation : JSON.stringify(observation);\n    const m = text.match(filenameRe);\n    if (m) pdfFile = m[1].trim();  // keep the last (most recent) match if several\n  }\n}\n\n// A final priced answer states a concrete euro total; a clarifying question does not.\nconst looksResolved = /\\d[\\d.]*,\\d{2}\\s*(€|EUR)/.test(answer);\nstore.pricingSessions[sessionId] = !looksResolved;\nstore.lastDocument[sessionId] = looksResolved ? pdfFile : null;\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1050,
+          100
+        ],
+        "name": "Update Pricing State",
+        "id": "41b010b4-4b73-4e46-ad60-d67b0b074ead"
+      },
+      {
+        "parameters": {
+          "mode": "manual",
+          "assignments": {
+            "assignments": [
+              {
+                "id": "1",
+                "name": "response",
+                "type": "string",
+                "value": "={{ $json.output }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -900,
+          100
+        ],
+        "name": "Pricing Answer (normalized)",
+        "id": "80bc47b6-9aa1-4a1d-809c-e8ed1bc2d2b4"
+      },
+      {
+        "parameters": {
+          "mode": "retrieve",
+          "qdrantCollection": {
+            "__rl": true,
+            "mode": "id",
+            "value": "location_hours"
+          },
+          "options": {
+            "contentPayloadKey": "text"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+        "typeVersion": 1.3,
+        "position": [
+          -1400,
+          320
+        ],
+        "name": "Timings Vector Store",
+        "credentials": {
+          "qdrantApi": {
+            "id": "0yyoWZb9YJlIqPnW",
+            "name": "Fahrschule Qdrant"
+          }
+        },
+        "id": "634e35f3-394f-4d55-85e6-3a08d0675e0c"
+      },
+      {
+        "parameters": {},
+        "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+        "typeVersion": 1,
+        "position": [
+          -1250,
+          320
+        ],
+        "name": "Timings Retriever",
+        "id": "943ef81a-3b5e-4fcd-aa02-a29d83631180"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.chatInput }}",
+          "options": {
+            "systemPromptTemplate": "You answer LOCATION AND OPENING HOURS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+        "typeVersion": 1.7,
+        "position": [
+          -1100,
+          320
+        ],
+        "name": "Timings RAG Chain",
+        "id": "2fcf574e-6d46-4de2-8c9d-5268a8269a3f"
+      },
+      {
+        "parameters": {
+          "mode": "retrieve",
+          "qdrantCollection": {
+            "__rl": true,
+            "mode": "id",
+            "value": "registration_docs"
+          },
+          "options": {
+            "contentPayloadKey": "text"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+        "typeVersion": 1.3,
+        "position": [
+          -1400,
+          540
+        ],
+        "name": "Documents Vector Store",
+        "credentials": {
+          "qdrantApi": {
+            "id": "0yyoWZb9YJlIqPnW",
+            "name": "Fahrschule Qdrant"
+          }
+        },
+        "id": "c449893c-ef54-4b7a-90a2-98a951d576bf"
+      },
+      {
+        "parameters": {},
+        "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+        "typeVersion": 1,
+        "position": [
+          -1250,
+          540
+        ],
+        "name": "Documents Retriever",
+        "id": "84dda385-16fd-43ad-9ec4-5e6ec1780bee"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.chatInput }}",
+          "options": {
+            "systemPromptTemplate": "You answer REGISTRATION AND REQUIRED-DOCUMENTS questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+        "typeVersion": 1.7,
+        "position": [
+          -1100,
+          540
+        ],
+        "name": "Documents RAG Chain",
+        "id": "d1575b76-3f52-45fc-8313-89c24cafa9aa"
+      },
+      {
+        "parameters": {
+          "mode": "retrieve",
+          "qdrantCollection": {
+            "__rl": true,
+            "mode": "id",
+            "value": "courses_offerings"
+          },
+          "options": {
+            "contentPayloadKey": "text"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+        "typeVersion": 1.3,
+        "position": [
+          -1400,
+          760
+        ],
+        "name": "Courses Vector Store",
+        "credentials": {
+          "qdrantApi": {
+            "id": "0yyoWZb9YJlIqPnW",
+            "name": "Fahrschule Qdrant"
+          }
+        },
+        "id": "ebaf7899-7479-495d-9365-98fbe51d6fb5"
+      },
+      {
+        "parameters": {},
+        "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+        "typeVersion": 1,
+        "position": [
+          -1250,
+          760
+        ],
+        "name": "Courses Retriever",
+        "id": "b876f714-af03-4a6d-918f-b442c75a995d"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.chatInput }}",
+          "options": {
+            "systemPromptTemplate": "You answer COURSE AND OFFERING questions using ONLY the retrieved context. If the context does not clearly answer, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+        "typeVersion": 1.7,
+        "position": [
+          -1100,
+          760
+        ],
+        "name": "Courses RAG Chain",
+        "id": "6c429264-34a3-4734-b6c4-7841846126a0"
+      },
+      {
+        "parameters": {
+          "mode": "retrieve",
+          "qdrantCollection": {
+            "__rl": true,
+            "mode": "id",
+            "value": "general"
+          },
+          "options": {
+            "contentPayloadKey": "text"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+        "typeVersion": 1.3,
+        "position": [
+          -1400,
+          980
+        ],
+        "name": "Other Vector Store",
+        "credentials": {
+          "qdrantApi": {
+            "id": "0yyoWZb9YJlIqPnW",
+            "name": "Fahrschule Qdrant"
+          }
+        },
+        "id": "bacb5b56-f61c-42ff-a753-e7a40e0e0e96"
+      },
+      {
+        "parameters": {},
+        "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+        "typeVersion": 1,
+        "position": [
+          -1250,
+          980
+        ],
+        "name": "Other Retriever",
+        "id": "070a16ca-91ef-4d44-8779-caee2d1d43a9"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.chatInput }}",
+          "options": {
+            "systemPromptTemplate": "You answer general company questions using ONLY the retrieved context. If nothing relevant was retrieved, say you are not certain and offer to connect the customer with the team.\n----------------\nContext: {context}"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+        "typeVersion": 1.7,
+        "position": [
+          -1100,
+          980
+        ],
+        "name": "Other RAG Chain",
+        "id": "0ceef78b-d534-4f58-9c52-c5a641f96a5f"
+      },
+      {
+        "parameters": {
+          "numberInputs": 5
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          -600,
+          500
+        ],
+        "name": "Merge Answers",
+        "id": "65e993d6-60b2-4710-88e4-475a7dbf2674"
+      },
+      {
+        "parameters": {
+          "aggregate": "aggregateIndividualFields",
+          "fieldsToAggregate": {
+            "fieldToAggregate": [
+              {
+                "fieldToAggregate": "response"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.aggregate",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          500
+        ],
+        "name": "Aggregate Answers",
+        "id": "5d1a76ca-4532-4222-b4af-d6f7c3575cf3"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=You are the final response formatter for a German driving school chatbot. You receive one or more draft answers from specialist agents, plus the customer's original message. Combine them into ONE clean, professional, well-formatted reply in the same language as the customer's message (German or English). Do not add, remove, or alter any number, price, date, or fact from the draft answers, only merge, reformat, and improve the phrasing. If a draft says it is not certain, keep that uncertainty and the offer to connect with the team in the final reply.\n\nCustomer's message: {{ $('Chat Trigger').item.json.chatInput }}\n\nDraft answers:\n{{ ($json.response || []).join('\\n\\n') }}"
+        },
+        "type": "@n8n/n8n-nodes-langchain.chainLlm",
+        "typeVersion": 1.9,
+        "position": [
+          -200,
+          500
+        ],
+        "name": "Synthesizer",
+        "id": "189d96d3-2d11-400e-b54f-e7c6c53716b6"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const store = $getWorkflowStaticData('global');\nconst sessionId = $('Chat Trigger').item.json.sessionId;\nconst docs = store.lastDocument || {};\nconst documentFile = docs[sessionId] || null;\n// consume once so it doesn't reattach to a later, unrelated reply in the same session\nif (sessionId in docs) delete docs[sessionId];\n\nconst item = $input.all()[0];\nreturn [{ json: { ...item.json, documentFile } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          0,
+          500
+        ],
+        "name": "Attach Document Link",
+        "id": "b54b7551-6c33-4942-99a5-e36d7c9a0fe6"
+      }
+    ],
+    "connections": {
+      "Chat Trigger": {
+        "main": [
+          [
+            {
+              "node": "Session Router",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Session Router": {
+        "main": [
+          [
+            {
+              "node": "Route Check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Route Check": {
+        "main": [
+          [
+            {
+              "node": "Pricing Agent",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Intent Classifier",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Intent Classifier",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Pricing Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Timings RAG Chain",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Documents RAG Chain",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Courses RAG Chain",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Other RAG Chain",
+              "type": "ai_languageModel",
+              "index": 0
+            },
+            {
+              "node": "Synthesizer",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Embeddings": {
+        "ai_embedding": [
+          [
+            {
+              "node": "Pricing Vector Store",
+              "type": "ai_embedding",
+              "index": 0
+            },
+            {
+              "node": "Timings Vector Store",
+              "type": "ai_embedding",
+              "index": 0
+            },
+            {
+              "node": "Documents Vector Store",
+              "type": "ai_embedding",
+              "index": 0
+            },
+            {
+              "node": "Courses Vector Store",
+              "type": "ai_embedding",
+              "index": 0
+            },
+            {
+              "node": "Other Vector Store",
+              "type": "ai_embedding",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Session Memory": {
+        "ai_memory": [
+          [
+            {
+              "node": "Pricing Agent",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Pricing Vector Store": {
+        "ai_tool": [
+          [
+            {
+              "node": "Pricing Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Pricing Agent": {
+        "main": [
+          [
+            {
+              "node": "Update Pricing State",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Pricing State": {
+        "main": [
+          [
+            {
+              "node": "Pricing Answer (normalized)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Pricing Answer (normalized)": {
+        "main": [
+          [
+            {
+              "node": "Merge Answers",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Timings Vector Store": {
+        "ai_vectorStore": [
+          [
+            {
+              "node": "Timings Retriever",
+              "type": "ai_vectorStore",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Timings Retriever": {
+        "ai_retriever": [
+          [
+            {
+              "node": "Timings RAG Chain",
+              "type": "ai_retriever",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Timings RAG Chain": {
+        "main": [
+          [
+            {
+              "node": "Merge Answers",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Documents Vector Store": {
+        "ai_vectorStore": [
+          [
+            {
+              "node": "Documents Retriever",
+              "type": "ai_vectorStore",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Documents Retriever": {
+        "ai_retriever": [
+          [
+            {
+              "node": "Documents RAG Chain",
+              "type": "ai_retriever",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Documents RAG Chain": {
+        "main": [
+          [
+            {
+              "node": "Merge Answers",
+              "type": "main",
+              "index": 2
+            }
+          ]
+        ]
+      },
+      "Courses Vector Store": {
+        "ai_vectorStore": [
+          [
+            {
+              "node": "Courses Retriever",
+              "type": "ai_vectorStore",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Courses Retriever": {
+        "ai_retriever": [
+          [
+            {
+              "node": "Courses RAG Chain",
+              "type": "ai_retriever",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Courses RAG Chain": {
+        "main": [
+          [
+            {
+              "node": "Merge Answers",
+              "type": "main",
+              "index": 3
+            }
+          ]
+        ]
+      },
+      "Other Vector Store": {
+        "ai_vectorStore": [
+          [
+            {
+              "node": "Other Retriever",
+              "type": "ai_vectorStore",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Other Retriever": {
+        "ai_retriever": [
+          [
+            {
+              "node": "Other RAG Chain",
+              "type": "ai_retriever",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Other RAG Chain": {
+        "main": [
+          [
+            {
+              "node": "Merge Answers",
+              "type": "main",
+              "index": 4
+            }
+          ]
+        ]
+      },
+      "Intent Classifier": {
+        "main": [
+          [
+            {
+              "node": "Pricing Agent",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Timings RAG Chain",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Documents RAG Chain",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Courses RAG Chain",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Other RAG Chain",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge Answers": {
+        "main": [
+          [
+            {
+              "node": "Aggregate Answers",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate Answers": {
+        "main": [
+          [
+            {
+              "node": "Synthesizer",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Synthesizer": {
+        "main": [
+          [
+            {
+              "node": "Attach Document Link",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Fahrschule Admin",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-07-16T18:38:57.594Z",
+        "id": 43,
+        "workflowId": "iPLMB3TIMwngEDDU",
+        "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+        "event": "activated",
+        "userId": "3068e795-a005-4af7-b4e6-7e9191129b19"
+      },
+      {
+        "createdAt": "2026-07-16T18:38:57.638Z",
+        "id": 45,
+        "workflowId": "iPLMB3TIMwngEDDU",
+        "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+        "event": "activated",
+        "userId": "3068e795-a005-4af7-b4e6-7e9191129b19"
+      },
+      {
+        "createdAt": "2026-07-16T18:38:57.578Z",
+        "id": 42,
+        "workflowId": "iPLMB3TIMwngEDDU",
+        "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+        "event": "deactivated",
+        "userId": "3068e795-a005-4af7-b4e6-7e9191129b19"
+      },
+      {
+        "createdAt": "2026-07-16T18:38:57.622Z",
+        "id": 44,
+        "workflowId": "iPLMB3TIMwngEDDU",
+        "versionId": "001e1636-8e18-4b39-b009-cbb0b14f3259",
+        "event": "deactivated",
+        "userId": "3068e795-a005-4af7-b4e6-7e9191129b19"
+      }
+    ]
   }
 }

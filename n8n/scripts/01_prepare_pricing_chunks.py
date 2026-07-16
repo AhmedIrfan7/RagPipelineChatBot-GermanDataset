@@ -56,6 +56,9 @@ def chunk_text(rec: dict) -> str:
             f"Zusätzlich externe Gebühren (TÜV, Bürgerbüro, Sehtest, Erste-Hilfe, "
             f"nicht von der Fahrschule berechnet): ca. {rec['external_fees_estimate_eur']:.0f} EUR."
         )
+    # Visible (not just metadata) so the Pricing Agent can cite it back when it
+    # states a final price, letting the workflow surface a real download link.
+    lines.append(f"Quelldokument (offizielles Preisblatt): {rec['source_file']}")
     return "\n".join(lines)
 
 

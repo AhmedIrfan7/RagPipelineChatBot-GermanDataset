@@ -92,13 +92,19 @@ BRANCHES = {
 }
 PRICING_AGENT_PROMPT = (
     "You are the Pricing specialist for a German driving school. You have a tool "
-    "that searches the official, verified price sheets. Many license classes have "
+    "that searches the official, verified price sheets. Some license classes "
+    "have only one priced variant (for example Mofa, AM, A1, A2, L, T, or a "
+    "variant the customer already named exactly, like BE or B197). Others have "
     "several differently priced variants, most notably Class B, which has about "
-    "18 variants, so you must NEVER guess or average a price across variants.\n\n"
+    "18, so you must NEVER guess or average a price across variants.\n\n"
     "Follow this exact process on every pricing question:\n"
-    "1. If the class or situation is not yet fully clear, ask ONE short "
-    "clarifying question at a time, in this order, skipping any step already "
-    "answered by the customer:\n"
+    "1. First decide whether the class actually needs disambiguation. If the "
+    "customer named a class that only has one variant, or already named a "
+    "specific variant exactly, skip straight to step 2, do not invent "
+    "clarifying questions that do not apply to that class.\n"
+    "2. If, and only if, the class genuinely has multiple priced variants and "
+    "it is not yet clear which one, ask ONE short clarifying question at a "
+    "time, in this order, skipping any step already answered by the customer:\n"
     "   a. Is this a new license, or a special case (converting a foreign "
     "license, re-issuance after withdrawal, switching driving schools, or "
     "removing an automatic-only restriction)?\n"
@@ -108,21 +114,25 @@ PRICING_AGENT_PROMPT = (
     "transmission? (Automatic keeps manual entitlement too, this is the B197 "
     "variant, and fully answers this question, no course-type question needed.)\n"
     "   d. If manual: standard course, intensive course, or with simulator?\n"
-    "2. Only once exactly ONE specific variant is unambiguous, use the search "
-    "tool to retrieve its real price and state the exact total, the effective "
-    "date, and mention the official price sheet is available as a download.\n"
-    "3. Never state a price for a class that still has multiple possible "
+    "3. Once exactly ONE specific variant is clear (whether immediately, from "
+    "step 1, or after disambiguating in step 2), use the search tool to "
+    "retrieve its real price and state the exact total and the effective date, "
+    "and mention the official price sheet is available as a download.\n"
+    "4. Never state a price for a class that still has multiple possible "
     "variants. Never invent, estimate, round, or calculate a discount. If the "
     "tool does not return a clear answer, say you are not certain and offer to "
     "connect the customer with the team.\n"
-    "4. Reply in the same language the customer is using (German or English), "
+    "5. Reply in the same language the customer is using (German or English), "
     "and remember answers the customer already gave earlier in this "
     "conversation, do not ask the same question twice.\n"
-    "5. You may be invoked directly for a message that is not actually about "
+    "6. You may be invoked directly for a message that is not actually about "
     "pricing (this can happen when the routing defaults to you mid-conversation). "
-    "If the customer's message is clearly unrelated to a driving license price "
-    "(for example a new, different topic), say briefly that you handle pricing "
-    "questions and ask them to restate what they need."
+    "If the customer's message is clearly unrelated to any driving license "
+    "topic at all (for example a completely different subject), say briefly "
+    "that you handle pricing questions and ask them to restate what they need. "
+    "A question naming a license class or course is on-topic even if you are "
+    "not yet sure exactly what it needs, in that case follow steps 1 to 3 "
+    "instead of treating it as off-topic."
 )
 
 FALLBACK_LABEL = "Other"
@@ -212,11 +222,32 @@ def rag_branch_nodes(label: str, collection: str, system_prompt: str, x: float, 
 UPDATE_STATE_CODE = r"""
 const store = $getWorkflowStaticData('global');
 if (!store.pricingSessions) store.pricingSessions = {};
+if (!store.lastDocument) store.lastDocument = {};
 const sessionId = $('Chat Trigger').item.json.sessionId;
 const answer = $json.output || '';
+
+// Extract the source PDF filename from the actual retrieved tool content
+// (returnIntermediateSteps=true on the Agent node), not from the model's own
+// prose, so this does not depend on the LLM remembering to cite it correctly
+// every time. The pricing chunk text always contains this exact line (see
+// scripts/01_prepare_pricing_chunks.py), so a match here is deterministic.
+const filenameRe = /Quelldokument \(offizielles Preisblatt\):\s*([^\n]+?\.pdf)/i;
+let pdfFile = null;
+const steps = $json.intermediateSteps;
+if (Array.isArray(steps)) {
+  for (const step of steps) {
+    const observation = (step && (step.observation || step.output)) || '';
+    const text = typeof observation === 'string' ? observation : JSON.stringify(observation);
+    const m = text.match(filenameRe);
+    if (m) pdfFile = m[1].trim();  // keep the last (most recent) match if several
+  }
+}
+
 // A final priced answer states a concrete euro total; a clarifying question does not.
 const looksResolved = /\d[\d.]*,\d{2}\s*(€|EUR)/.test(answer);
 store.pricingSessions[sessionId] = !looksResolved;
+store.lastDocument[sessionId] = looksResolved ? pdfFile : null;
+
 return $input.all();
 """.strip()
 
@@ -226,6 +257,18 @@ const sessions = store.pricingSessions || {};
 const sessionId = $json.sessionId;
 const midPricing = sessions[sessionId] === true;
 return [{ json: { ...$json, _forcePricing: midPricing } }];
+""".strip()
+
+ATTACH_DOCUMENT_CODE = r"""
+const store = $getWorkflowStaticData('global');
+const sessionId = $('Chat Trigger').item.json.sessionId;
+const docs = store.lastDocument || {};
+const documentFile = docs[sessionId] || null;
+// consume once so it doesn't reattach to a later, unrelated reply in the same session
+if (sessionId in docs) delete docs[sessionId];
+
+const item = $input.all()[0];
+return [{ json: { ...item.json, documentFile } }];
 """.strip()
 
 
@@ -267,7 +310,10 @@ def pricing_agent_nodes(x: float, y: float, qdrant_cred: str) -> tuple[list[dict
                 "promptType": "define",
                 "text": "={{ $json.chatInput }}",
                 "hasOutputParser": False,
-                "options": {"systemMessage": PRICING_AGENT_PROMPT},
+                "options": {
+                    "systemMessage": PRICING_AGENT_PROMPT,
+                    "returnIntermediateSteps": True,
+                },
             },
             "type": "@n8n/n8n-nodes-langchain.agent", "typeVersion": 3.1,
             "position": [x + 200, y], "name": agent_name,
@@ -429,9 +475,15 @@ def build_workflow(e: dict) -> dict:
         "type": "@n8n/n8n-nodes-langchain.chainLlm", "typeVersion": 1.9,
         "position": [-200, 500], "name": "Synthesizer",
     })
+    nodes.append({
+        "parameters": {"mode": "runOnceForAllItems", "jsCode": ATTACH_DOCUMENT_CODE},
+        "type": "n8n-nodes-base.code", "typeVersion": 2,
+        "position": [0, 500], "name": "Attach Document Link",
+    })
 
     connections["Merge Answers"] = {"main": [[{"node": "Aggregate Answers", "type": "main", "index": 0}]]}
     connections["Aggregate Answers"] = {"main": [[{"node": "Synthesizer", "type": "main", "index": 0}]]}
+    connections["Synthesizer"] = {"main": [[{"node": "Attach Document Link", "type": "main", "index": 0}]]}
     connections["OpenAI Chat Model"]["ai_languageModel"][0].append(
         {"node": "Synthesizer", "type": "ai_languageModel", "index": 0})
 

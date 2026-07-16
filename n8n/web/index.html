@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACADEMY Fahrschule &middot; Chat-Assistent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700;800&family=Overpass+Mono:wght@400;600&family=Karla:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt-950:#0b1420; --asphalt-900:#0e1926; --asphalt-850:#121f30; --asphalt-800:#17293c;
+    --sign-blue:#005387; --sign-blue-bright:#2f8fd6; --sign-blue-soft:rgba(47,143,214,.16);
+    --caution-yellow:#ffcc00; --caution-yellow-ink:#3a2e00;
+    --paper:#f4f6f8; --paper-dim:#e4e9ed; --ink:#0b1420; --ink-soft:#33465a;
+    --muted:#9fb3c8; --faint:#5b7086; --line:rgba(255,255,255,.09); --line-strong:rgba(255,255,255,.16);
+    --good:#28b774;
+    --display:'Overpass',system-ui,sans-serif; --body:'Karla',system-ui,sans-serif; --mono:'Overpass Mono',ui-monospace,monospace;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(47,143,214,.10), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(255,204,0,.05), transparent 55%),
+      var(--asphalt-950);
+    color:var(--paper); font-family:var(--body); -webkit-font-smoothing:antialiased;
+    display:flex; justify-content:center; min-height:100vh;
+  }
+  :focus-visible{outline:2px solid var(--caution-yellow); outline-offset:2px; border-radius:6px}
+
+  .app{
+    width:100%; max-width:640px; min-height:100vh; display:flex; flex-direction:column;
+    background:linear-gradient(180deg, var(--asphalt-900), var(--asphalt-950) 40%);
+    border-left:1px solid var(--line); border-right:1px solid var(--line);
+    position:relative;
+  }
+
+  /* ---------------- header: a road-sign gantry ---------------- */
+  header{
+    background:linear-gradient(180deg, var(--sign-blue) 0%, #003f68 100%);
+    padding:16px 18px; display:flex; align-items:center; gap:12px;
+    border-bottom:3px solid var(--caution-yellow);
+    box-shadow:0 8px 24px -12px rgba(0,0,0,.6);
+  }
+  .badge{
+    flex:none; width:42px; height:42px; border-radius:9px; background:var(--paper);
+    display:grid; place-items:center; font-family:var(--display); font-weight:800;
+    color:var(--sign-blue); font-size:15px; letter-spacing:-.02em;
+    box-shadow:inset 0 0 0 2px var(--sign-blue);
+  }
+  .htext{flex:1; min-width:0}
+  .htext .name{font-family:var(--display); font-weight:800; font-size:15.5px; letter-spacing:.01em; color:#fff}
+  .htext .sub{font-family:var(--mono); font-size:11px; color:#cfe4f5; letter-spacing:.04em; margin-top:2px}
+  .langtoggle{flex:none; display:flex; background:rgba(0,0,0,.22); border-radius:9px; padding:3px; gap:2px}
+  .langtoggle button{
+    font-family:var(--display); font-weight:700; font-size:12px; letter-spacing:.04em;
+    padding:6px 11px; border:none; border-radius:7px; background:transparent; color:#cfe4f5; cursor:pointer;
+  }
+  .langtoggle button.active{background:var(--caution-yellow); color:var(--caution-yellow-ink)}
+
+  /* ---------------- message list ---------------- */
+  #log{flex:1; overflow-y:auto; padding:20px 16px 8px; display:flex; flex-direction:column; gap:12px}
+  .row{display:flex; max-width:92%}
+  .row.bot{align-self:flex-start}
+  .row.user{align-self:flex-end}
+  .bub{padding:11px 14px; border-radius:var(--radius); font-size:14.5px; line-height:1.55; white-space:pre-wrap}
+  .row.bot .bub{background:var(--sign-blue); color:#fff; border-bottom-left-radius:4px; box-shadow:0 2px 10px -4px rgba(0,0,0,.5)}
+  .row.user .bub{background:var(--paper); color:var(--ink); border-bottom-right-radius:4px}
+  .opts{display:flex; flex-wrap:wrap; gap:7px; align-self:flex-start; max-width:92%}
+  .opt-btn{
+    font-family:var(--display); font-weight:600; font-size:13px; color:var(--paper);
+    background:var(--asphalt-800); border:1px solid var(--line-strong); border-radius:9px;
+    padding:8px 12px; cursor:pointer; transition:background .12s, border-color .12s;
+  }
+  .opt-btn:hover{background:var(--sign-blue-soft); border-color:var(--sign-blue-bright)}
+  .typing{align-self:flex-start; display:flex; gap:5px; padding:12px 6px}
+  .typing i{width:6px; height:6px; border-radius:50%; background:var(--muted); animation:blink 1.1s infinite ease-in-out}
+  .typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+  @keyframes blink{0%,80%,100%{opacity:.25; transform:translateY(0)}40%{opacity:1; transform:translateY(-2px)}}
+
+  /* ---------------- signature element: the price sign-plate ---------------- */
+  .price-card{
+    align-self:flex-start; max-width:96%; width:100%; background:var(--paper); color:var(--ink);
+    border-radius:var(--radius); overflow:hidden; box-shadow:0 12px 30px -14px rgba(0,0,0,.65);
+    border:1px solid var(--paper-dim);
+  }
+  .price-card .rule{height:6px; background:linear-gradient(90deg, var(--sign-blue), var(--sign-blue-bright))}
+  .price-card .body{padding:16px 18px 18px}
+  .price-card .eyebrow{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--faint); display:flex; align-items:center; justify-content:space-between; gap:8px;
+  }
+  .price-card .stamp{
+    font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--caution-yellow-ink);
+    background:var(--caution-yellow); padding:2px 8px; border-radius:4px; white-space:nowrap;
+  }
+  .price-card .title{font-family:var(--display); font-weight:700; font-size:15px; margin-top:6px; color:var(--ink-soft)}
+  .price-card .total{
+    font-family:var(--display); font-weight:800; font-size:34px; letter-spacing:-.01em;
+    font-variant-numeric:tabular-nums; color:var(--sign-blue); margin-top:4px;
+  }
+  .price-card .fees{font-size:12px; color:var(--faint); margin-top:10px; line-height:1.5}
+  .dl-btn{
+    margin-top:14px; display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    background:var(--sign-blue); color:#fff; font-family:var(--display); font-weight:700; font-size:13.5px;
+    text-decoration:none; padding:11px 14px; border-radius:9px; transition:background .12s;
+  }
+  .dl-btn:hover{background:#00436c}
+  .dl-btn svg{width:16px; height:16px; flex:none}
+
+  /* ---------------- input bar ---------------- */
+  form{
+    display:flex; gap:8px; padding:14px 16px; background:var(--asphalt-900);
+    border-top:1px solid var(--line);
+  }
+  #inp{
+    flex:1; background:var(--asphalt-850); border:1px solid var(--line-strong); color:var(--paper);
+    font-family:var(--body); font-size:14.5px; padding:12px 14px; border-radius:11px;
+  }
+  #inp::placeholder{color:var(--faint)}
+  #send{
+    flex:none; width:44px; height:44px; border-radius:11px; border:none; cursor:pointer;
+    background:var(--caution-yellow); color:var(--caution-yellow-ink); display:grid; place-items:center;
+  }
+  #send:disabled{opacity:.5; cursor:default}
+  #send svg{width:19px; height:19px}
+
+  ::-webkit-scrollbar{width:9px}
+  ::-webkit-scrollbar-thumb{background:var(--asphalt-800); border-radius:6px}
+
+  @media (max-width:480px){
+    .price-card .total{font-size:28px}
+    header{padding:13px 14px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .typing i{animation:none; opacity:.6}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="badge" aria-hidden="true">FS</div>
+    <div class="htext">
+      <div class="name" id="hname">ACADEMY Fahrschule</div>
+      <div class="sub" id="hsub">CHAT-ASSISTENT &middot; PREISE &amp; INFOS</div>
+    </div>
+    <div class="langtoggle" role="group" aria-label="Language">
+      <button id="btn-de" class="active" onclick="setLang('de')">DE</button>
+      <button id="btn-en" onclick="setLang('en')">EN</button>
+    </div>
+  </header>
+
+  <div id="log" role="log" aria-live="polite"></div>
+
+  <form id="form" onsubmit="return onSubmit(event)">
+    <input id="inp" type="text" autocomplete="off" placeholder="Nachricht eingeben&hellip;" aria-label="Message">
+    <button id="send" type="submit" aria-label="Senden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+    </button>
+  </form>
+</div>
+
+<script>
+const WEBHOOK_URL = "http://localhost:5678/webhook/fahrschule-native-chat/chat";
+const PDF_BASE_URL = "http://127.0.0.1:8091/";
+
+const T = {
+  de: { placeholder: "Nachricht eingeben…", sub: "CHAT-ASSISTENT · PREISE & INFOS",
+        greet: "Willkommen bei ACADEMY Fahrschule! Wie kann ich Ihnen heute helfen? Fragen Sie mich nach Preisen, Öffnungszeiten, benötigten Unterlagen oder unseren Kursen.",
+        dl: "Preisblatt herunterladen (PDF)", total: "GESAMTBETRAG", stand: "Stand" },
+  en: { placeholder: "Type a message…", sub: "CHAT ASSISTANT · PRICING & INFO",
+        greet: "Welcome to ACADEMY Fahrschule! How can I help today? Ask me about prices, opening hours, required documents, or our courses.",
+        dl: "Download price sheet (PDF)", total: "TOTAL", stand: "Effective" },
+};
+let lang = "de";
+let sessionId = "web-" + Math.random().toString(36).slice(2, 11);
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const inp = document.getElementById("inp");
+const sendBtn = document.getElementById("send");
+
+function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function addBotText(text){
+  const row = document.createElement("div"); row.className = "row bot";
+  const b = document.createElement("div"); b.className = "bub"; b.textContent = text;
+  row.appendChild(b); log.appendChild(row); scrollBottom();
+}
+function addUserText(text){
+  const row = document.createElement("div"); row.className = "row user";
+  const b = document.createElement("div"); b.className = "bub"; b.textContent = text;
+  row.appendChild(b); log.appendChild(row); scrollBottom();
+}
+function scrollBottom(){ log.scrollTop = log.scrollHeight; }
+
+function showTyping(){
+  const el = document.createElement("div"); el.className = "typing"; el.id = "typing-indicator";
+  el.innerHTML = "<i></i><i></i><i></i>";
+  log.appendChild(el); scrollBottom();
+  return el;
+}
+
+// Parses a price total + "Preisstand" date out of the synthesizer's prose
+// reply, so the price card can headline the number instead of just showing
+// raw text. The full breakdown stays in the prose body verbatim below it
+// rather than being re-parsed into a line-item list: the model rephrases
+// this breakdown differently every turn (sometimes "N x P = T", sometimes
+// plain "Label: T"), and German line-item names can themselves contain a
+// literal " - " (e.g. "1. Pruefung Theorie - MOFA"), so no fixed pattern
+// can reliably tell a bullet separator from a label's own hyphen. Falls
+// back gracefully if a pattern isn't present.
+function parsePriceInfo(text){
+  // Anchor the total to a labelling keyword ("Gesamtbetrag", "Gesamtpreis",
+  // "insgesamt", "Total") so we don't accidentally headline the first
+  // line-item amount (e.g. "Grundbetrag Mofa: 209,00 EUR" appearing before
+  // the real total further down). Fall back to the LAST euro amount if no
+  // keyword matches, since totals conventionally come at the end of a
+  // priced answer.
+  const anchored = text.match(/(?:Gesamtbetrag|Gesamtpreis|insgesamt|Total)[^\d]{0,30}(\d[\d.]*,\d{2})\s*(?:€|EUR)/i);
+  let total = anchored ? anchored[1] : null;
+  if (!total) {
+    const all = [...text.matchAll(/(\d[\d.]*,\d{2})\s*(?:€|EUR)/g)];
+    total = all.length ? all[all.length - 1][1] : null;
+  }
+  const dateMatch = text.match(/(\d{2}\.\d{2}\.\d{4})/);
+  return { total, date: dateMatch ? dateMatch[1] : null };
+}
+
+function addPriceCard(text, documentFile){
+  const info = parsePriceInfo(text);
+  const row = document.createElement("div"); row.className = "row bot";
+  row.style.maxWidth = "96%";
+  const card = document.createElement("div"); card.className = "price-card";
+
+  card.innerHTML = `
+    <div class="rule"></div>
+    <div class="body">
+      <div class="eyebrow"><span>${esc(T[lang].total)}</span>${info.date ? `<span class="stamp">${esc(T[lang].stand)}: ${esc(info.date)}</span>` : ""}</div>
+      <div class="total">${info.total ? esc(info.total) + " €" : "–"}</div>
+      <div class="fees">${esc(text)}</div>
+      ${documentFile ? `<a class="dl-btn" href="${PDF_BASE_URL}${encodeURIComponent(documentFile)}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        ${esc(T[lang].dl)}</a>` : ""}
+    </div>`;
+  row.appendChild(card); log.appendChild(row); scrollBottom();
+}
+
+function addOptions(labels){
+  const wrap = document.createElement("div"); wrap.className = "opts";
+  labels.forEach(l => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "opt-btn"; b.textContent = l;
+    b.onclick = () => { addUserText(l); send(l); };
+    wrap.appendChild(b);
+  });
+  log.appendChild(wrap); scrollBottom();
+}
+
+async function send(message){
+  sendBtn.disabled = true;
+  const typing = showTyping();
+  try {
+    const res = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatInput: message, sessionId }),
+    });
+    const data = await res.json();
+    typing.remove();
+    const text = data.text || (lang === "de" ? "Entschuldigung, da ist etwas schiefgelaufen." : "Sorry, something went wrong.");
+    if (data.documentFile) {
+      addPriceCard(text, data.documentFile);
+    } else {
+      addBotText(text);
+    }
+  } catch (err) {
+    typing.remove();
+    addBotText(lang === "de"
+      ? "Verbindung zum Assistenten fehlgeschlagen. Bitte versuchen Sie es erneut."
+      : "Could not reach the assistant. Please try again.");
+  } finally {
+    sendBtn.disabled = false;
+    inp.focus();
+  }
+}
+
+function onSubmit(e){
+  e.preventDefault();
+  const msg = inp.value.trim();
+  if (!msg) return false;
+  inp.value = "";
+  addUserText(msg);
+  send(msg);
+  return false;
+}
+
+function setLang(l){
+  lang = l;
+  document.getElementById("btn-de").classList.toggle("active", l === "de");
+  document.getElementById("btn-en").classList.toggle("active", l === "en");
+  document.documentElement.lang = l;
+  inp.placeholder = T[l].placeholder;
+  document.getElementById("hsub").textContent = T[l].sub;
+}
+
+// initial greeting (no backend call needed, purely local)
+addBotText(T.de.greet);
+addOptions(["Was kostet Klasse B?", "Wie sind eure Öffnungszeiten?", "Welche Unterlagen brauche ich?"]);
+</script>
+</body>
+</html>
